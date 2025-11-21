@@ -1,0 +1,16 @@
+node_modules
+.env
+.env.*
+uploads
+*.log
+coverage
+*.sql
+*.jpg
+settings.json
+import-data.js
+*.rest
+*-v2.js
+serviceAccount-Firebase-*.json
+*-data.json
+*.txt
+*DB.js
