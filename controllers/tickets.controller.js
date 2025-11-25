@@ -220,6 +220,31 @@ class TicketsController {
         })
     })
 
+    uploadBeforeAfterImages = asyncHandler(async (req, res, next) => {
+        console.log("RECEIVED BODY:", JSON.stringify(req.body, null, 2));
+        const { id } = req.params;
+        const ticket = await Tickets.findById(id);
+
+        if (!ticket) return next(new ApiError("Ticket not found", 404));
+
+        if (
+            !req.body.beforeImages ||
+            !req.body.afterImages
+        ) {
+            return next(new ApiError("Before and After images are required", 400));
+        }
+
+        ticket.beforeAfterImages.before = req.body.beforeImages;
+        ticket.beforeAfterImages.after = req.body.afterImages;
+
+        await ticket.save();
+
+        res.json({
+            status: "success",
+            message: `Images uploaded successfully`,
+            ticket
+        });
+    });
 
 }
 
