@@ -16,7 +16,7 @@ const PORT = args.port || process.env.PORT || 8000;
 require("./startup/logging")(app);
 require("./startup/app")(app);
 require("./startup/db")();
-require("./startup/createAdmin")();
+require("./startup/createSuperAdmin")();
 // Server
 server.listen(PORT, (_) => {
     console.log(`🚀 ~ Server  Running on port ~ ${PORT}`.blue.bold);
