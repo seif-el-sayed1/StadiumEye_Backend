@@ -77,6 +77,14 @@ router
         allowedTo(ADMIN, SUPER_ADMIN),
         TicketsController.choosePriority
     )
+
+router 
+    .route("/:id/visibility")
+    .patch(
+        protect, 
+        // allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsController.changeVisibility
+    )
     
 
 
