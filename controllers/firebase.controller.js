@@ -193,19 +193,22 @@ class FirebaseImageController {
       const { files } = req;
       let fieldName;
       if (files && files.length > 0) {
-        let photosPromise = [];
+        const photosByField = {}; 
         await Promise.all(
-          files.map(async (file) => {
-            if (file.fieldname?.toLowerCase()?.includes("images")) {
-              fieldName = file.fieldname;
-              photosPromise.push(uploadImageAndGetUrl(file));
-            }
-          })
+            files.map(async (file) => {
+                if (file.fieldname?.toLowerCase()?.includes("images")) {
+                    if (!photosByField[file.fieldname]) photosByField[file.fieldname] = [];
+                    photosByField[file.fieldname].push(await uploadImageAndGetUrl(file));
+                }
+            })
         );
-        if (photosPromise.length > 0) req.body[fieldName] = await Promise.all(photosPromise);
-      }
+
+        for (const key in photosByField) {
+            req.body[key] = photosByField[key];
+        }
+    }
       next();
-    });
+  });
 
   uploadSingleImage = (modelName) =>
     asyncHandler(async (req, res, next) => {
