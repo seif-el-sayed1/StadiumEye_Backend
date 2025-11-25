@@ -33,6 +33,10 @@ const adminSchema = mongoose.Schema(
       type: Boolean,
       default: false
     },
+    isSuperAdmin: {
+      type: Boolean,
+      default: false
+    },
     isBlocked: Boolean,
     isDeleted: {
       type: Boolean,
