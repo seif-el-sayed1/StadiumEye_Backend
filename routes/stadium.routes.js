@@ -1,7 +1,7 @@
 const express = require("express");
 
 // Constants
-const { ADMIN } = require("../utils/constants");
+const { SUPER_ADMIN, ADMIN } = require("../utils/constants");
 
 //middleware
 const { protect, allowedTo } = require("../middlewares/auth.middleware");
@@ -20,7 +20,7 @@ router
     .route("/")
     .post(
         protect, 
-        allowedTo(ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN),
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("StadiumImages"),
         FirebaseController.uploadMultipleVideos("StadiumVideos"),
@@ -34,7 +34,7 @@ router
     .get(StadiumController.getSingleStadium)
     .patch(
         protect,
-        allowedTo(ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN),
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("StadiumImages"),
         FirebaseController.uploadMultipleVideos("StadiumVideos"),
@@ -43,7 +43,7 @@ router
     )
     .delete(
         protect,
-        allowedTo(ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN),
         StadiumController.deleteStadium
     );
 
