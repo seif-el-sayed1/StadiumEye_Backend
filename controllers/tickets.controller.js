@@ -77,7 +77,6 @@ class TicketsController {
             return next(new ApiError(`Ticket Not Found`, 404));
         }
         
-        if (oldTicket.status !== "open") return next(new ApiError(`Ticket is ${oldTicket.status} You can't update`, 400));
 
         if (req.body.ticketVideos) {
             const oldVideos = oldTicket.ticketVideos || [];

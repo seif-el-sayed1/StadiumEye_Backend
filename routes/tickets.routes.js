@@ -50,6 +50,7 @@ router
     ).patch(
         protect, 
         // allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsValidator.checkIfTicketIsOpen,
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
         FirebaseController.uploadMultipleVideos("ticketVideos"),

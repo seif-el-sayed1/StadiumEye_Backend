@@ -3,7 +3,9 @@ const joiErrorHandler = require("./joiErrorHandler.js");
 const { objectIdValidator } = require("./validatorComponents.js");
 const { STADIUM_AREA, TICKET_TYPES } = require("../utils/constants.js");
 const extractLatLong = require("../utils/extractCoordinates.js");
-
+const Tickets = require("../models/ticket.model");
+const ApiError = require("../utils/ApiError");
+const asyncHandler = require("express-async-handler");
 
 class TicketsValidator {
     addTicketValidator(req, res, next)  {
@@ -52,6 +54,22 @@ class TicketsValidator {
         next();
     }
 
+    checkIfTicketIsOpen = asyncHandler(async (req, res, next) => {
+        const ticket = await Tickets.findById(req.params.id);
+
+        if (!ticket) {
+            return next(new ApiError("Ticket not found", 404));
+        }
+
+        if (ticket.status !== "open") {
+            return next(
+                new ApiError(`Ticket is ${ticket.status} You can't update`, 400)
+            );
+        }
+
+        next();
+    });
+
     updateTicketValidator(req, res, next) {
         let { locationLink } = req.body;
 
@@ -92,6 +110,7 @@ class TicketsValidator {
 
         next();
     }
+
 }
 
 
