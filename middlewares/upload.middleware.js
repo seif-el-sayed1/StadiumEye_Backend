@@ -96,7 +96,9 @@ const uploadMultipleVideos = VideoConfiguration.any([
 
 const uploadMedia = uploadMediaConfiguration.any([
   { name: "stadiumImages", maxCount: 10 },
-  { name: "stadiumVideos", maxCount: 10 }
+  { name: "stadiumVideos", maxCount: 10 },
+  { name: "ticketImages", maxCount: 10 },
+  { name: "ticketVideos", maxCount: 10 }
 ]);
 
 
