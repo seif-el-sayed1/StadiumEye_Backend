@@ -53,7 +53,7 @@ class ApiFeatures {
     }
 
     cleanResponse() {
-        const staticFields = ["updatedAt", "__v", "createdAt", "nameEn"];
+        const staticFields = ["updatedAt", "__v"];
         const fieldsToExclude = staticFields.map(field => `-${field}`);
         this.query = this.query.select(fieldsToExclude.join(" "));
         return this;
