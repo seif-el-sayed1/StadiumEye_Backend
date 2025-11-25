@@ -157,8 +157,23 @@ class TicketsController {
 
     })
 
-    //@
-    
+    //@desc Choose Priority
+    //@route Patch /tickets/:id/priority
+    //@access Private
+    choosePriority = asyncHandler(async (req, res, next) => {
+        const { id } = req.params
+        const ticket = await Tickets.findById(id);
+        if (!ticket) return next(new ApiError("Ticket not found", 404));
+        if (ticket.priority === req.body.priority) return next(new ApiError(`Ticket is already ${ticket.priority}`, 400));
+        
+        ticket.priority = req.body.priority;
+        await ticket.save();
+        res.json({
+            status: "success",
+            message: `Ticket priority changed to ${ticket.priority} successfully`,
+            ticket
+        })
+    })
 }
 
 

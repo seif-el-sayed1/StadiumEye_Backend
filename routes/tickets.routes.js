@@ -70,5 +70,14 @@ router
         TicketsController.changeStatus
     )
 
+router
+    .route("/:id/priority")
+    .patch(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsController.choosePriority
+    )
+    
+
 
 module.exports = router;
