@@ -1,5 +1,5 @@
 const Joi = require("joi");
-const User = require("../models/fan.model.js");
+const User = require("../models/user.model.js");
 const Country = require("../models/country.model.js");
 const ApiError = require("../utils/ApiError.js");
 const { translate } = require("../utils/translation.js");

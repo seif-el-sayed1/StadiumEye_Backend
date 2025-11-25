@@ -5,7 +5,7 @@ const { objectIdValidator, phoneNumberValidator } = require("./validatorComponen
 const ApiError = require("../utils/ApiError");
 const { translate } = require("../utils/translation");
 // const City = require("../models/city.model");
-const User = require("../models/fan.model");
+const User = require("../models/user.model");
 const {
   GENDER_LIST_EN,
   GENDER_LIST_AR,
@@ -89,6 +89,16 @@ class UserValidator {
                 "string.pattern.base": "Invalid Phone Number"
             }),
 
+        city: Joi.string()
+            .custom(objectIdValidator)
+            .required()
+            .messages({ "any.required": "City is required" }),
+          
+        country: Joi.string()
+            .custom(objectIdValidator)
+            .required()
+            .messages({ "any.required": "Country is required" }),
+
         profilePicture: Joi.string()
             .optional(),
 
@@ -146,8 +156,8 @@ class UserValidator {
         "any.required": "Phone number is required"
       }),
       email: Joi.string().email().optional(),
-      // city: Joi.custom(objectIdValidator).optional(),
-      // country: Joi.custom(objectIdValidator).optional(),
+      city: Joi.custom(objectIdValidator).optional(),
+      country: Joi.custom(objectIdValidator).optional(),
       // region: Joi.custom(objectIdValidator).optional(),
       genderEn: Joi.string()
         .valid(...GENDER_LIST_EN)
@@ -160,12 +170,11 @@ class UserValidator {
     });
     joiErrorHandler(schema, req);
     // Check city existence
-    // let { city, genderEn } = req.body;
-    let { genderEn } = req.body;
-    // if (city) {
-    //   const existingCity = await City.findById(city).populate("country").lean();
-    //   if (!existingCity) return next(new ApiError(translate("Invalid city", req.headers.lang), 400));
-    // }
+    let { city, genderEn } = req.body;
+    if (city) {
+      const existingCity = await City.findById(city).populate("country").lean();
+      if (!existingCity) return next(new ApiError(translate("Invalid city", req.headers.lang), 400));
+    }
     if (genderEn) {
       switch (genderEn.toLowerCase()) {
         case "male":

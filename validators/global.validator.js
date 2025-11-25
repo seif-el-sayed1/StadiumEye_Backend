@@ -1,7 +1,7 @@
 const Joi = require("joi");
 const asyncHandler = require("express-async-handler");
 const joiErrorHandler = require("./joiErrorHandler");
-const User = require("../models/fan.model");
+const User = require("../models/user.model");
 const { LOGIN_TYPE_LIST, LOGIN_TYPE_PLATFORM_LIST, LANGS } = require("../utils/constants");
 const ApiError = require("../utils/ApiError");
 const { translate } = require("../utils/translation");
