@@ -2,7 +2,9 @@ const asyncHandler = require("express-async-handler");
 const ApiError = require('../utils/ApiError');
 const ApiFeatures = require("../utils/ApiFeatures");
 const Tickets = require("../models/ticket.model");
+const User = require("../models/user.model");
 const FirebaseController = require("./firebase.controller");
+const mongoose = require("mongoose")
 
 class TicketsController { 
 
@@ -192,6 +194,33 @@ class TicketsController {
             ticket
         })
     })
+
+    //@desc Assign Ticket
+    //@route Patch /tickets/:id/assign
+    //@access Private
+    assignTicket = asyncHandler(async (req, res, next) => {
+        const { id } = req.params
+        const ticket = await Tickets.findById(id);
+        if (!ticket) return next(new ApiError("Ticket not found", 404));
+        
+        if (!mongoose.Types.ObjectId.isValid(req.body.assignedTo)) {
+            return next(new ApiError("assignedTo must be a valid ObjectId", 400));
+        }
+
+        const user = await User.findById(req.body.assignedTo);
+        if (!user) return next(new ApiError("User not found", 404));
+
+        ticket.assignedTo = req.body.assignedTo;
+        await ticket.save();
+
+        res.json({
+            status: "success",
+            message: `Ticket assigned to ${user.fullName}`,
+            ticket
+        })
+    })
+
+
 }
 
 

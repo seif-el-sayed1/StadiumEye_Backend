@@ -90,6 +90,11 @@ ticketSchema.pre(/\bfind/, async function (next) {
         model: "User",
         select: "firstName lastName email"
     });
+    this.populate({
+        path: "assignedTo",
+        model: "User",
+        select: "firstName lastName email"
+    })
     next();
 });
 

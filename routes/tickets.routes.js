@@ -85,6 +85,14 @@ router
         // allowedTo(ADMIN, SUPER_ADMIN),
         TicketsController.changeVisibility
     )
+
+router
+    .route("/:id/assign")
+    .patch(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsController.assignTicket
+    )
     
 
 
