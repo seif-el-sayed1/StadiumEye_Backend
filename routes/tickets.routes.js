@@ -93,7 +93,15 @@ router
         allowedTo(ADMIN, SUPER_ADMIN),
         TicketsController.assignTicket
     )
-    
 
+router
+    .route("/:id/before-after")
+    .patch(
+        protect, 
+        // allowedTo(ADMIN, SUPER_ADMIN),
+        upload.uploadMedia,
+        FirebaseController.uploadMultipleImages("ticketImages"),
+        TicketsController.uploadBeforeAfterImages
+    )
 
 module.exports = router;
