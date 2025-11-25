@@ -61,5 +61,13 @@ router
         TicketsController.deleteTicket
     )
 
+router
+    .route("/:id/status")
+    .patch(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsController.changeStatus
+    )
+
 
 module.exports = router;

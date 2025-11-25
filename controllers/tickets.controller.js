@@ -137,6 +137,28 @@ class TicketsController {
             ticket
         });
     });
+
+    //@desc Change Status
+    //@route Patch /tickets/:id/status
+    //@access Private
+    changeStatus = asyncHandler(async (req, res, next) => {
+        const { id } = req.params
+        const ticket = await Tickets.findById(id);
+        if (!ticket) return next(new ApiError("Ticket not found", 404));
+        
+        if (ticket.status === req.body.status) return next(new ApiError(`Ticket is already ${ticket.status}`, 400));
+
+        ticket.status = req.body.status;
+        await ticket.save();
+        res.json({
+            status: "success",
+            message: `Ticket status changed to ${ticket.status} successfully`,
+            ticket
+        })
+
+    })
+
+    //@
     
 }
 
