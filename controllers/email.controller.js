@@ -1,15 +1,5 @@
 const sendEmail = require("../utils/sendEmail");
 const generateHTML = require("../utils/generateHTML");
-const {
-  REPORT_CHAT_TYPE,
-  REPORT_HANGOUT_TYPE,
-  REPORT_REQUEST_TYPE,
-  REPORT_USER_TYPE,
-  ADMIN,
-  SUPER_ADMIN,
-  REPORT_EVENT_TYPE
-} = require("../utils/constants");
-
 class EmailController {
   adminVerificationEmail = async (token, emailAddress) => {
     const adminUrl =  process.env.ADMIN_URL;
@@ -105,6 +95,43 @@ class EmailController {
       html: html
     });
   };
+
+  reportEmailToAdmin = async (emailAddress, ticket) => {
+    const html = generateHTML({
+      emailTitle: `A New Ticket Has Been Submitted for ${ticket.stadium.stadiumName}`,
+      emailSubTitle: `Ticket reported in the ${ticket.area} area`,
+      btnText: "View Ticket Details",
+      btnLink: process.env.LANDING_URL + "ticket/" + ticket._id,
+      belowText: "View All Tickets:",
+      belowLink: process.env.LANDING_URL + "tickets",
+      footerNote: `Ticket Submitted by ${ticket.createdBy.firstName} ${ticket.createdBy.lastName} for ${ticket.stadium.stadiumName} in ${ticket.area} area.`,
+      footerLink: process.env.APP_NAME
+    });
+    await sendEmail({
+      email: emailAddress,
+      subject: `A New Ticket Submitted`,
+      html: html
+    })
+  }
+
+  reportEmailToUser = async (emailAddress, ticket) => {
+    const html = generateHTML({
+      emailTitle: "Your Ticket Has Been Successfully Submitted",
+      emailSubTitle: `Thank you for submitting a ticket for ${ticket.stadium.stadiumName}!`,
+      belowText: "View Your Ticket:",
+      btnText: "View Ticket Details",
+      btnLink: process.env.LANDING_URL + "ticket/" + ticket._id,
+      belowText: "View All Your Tickets",
+      belowLink: process.env.LANDING_URL + "tickets/my-tickets",
+      footerNote: `Thank you for reporting this issue. Our team will review your ticket and follow up if necessary.`,
+      footerLink: process.env.APP_NAME
+    });
+    await sendEmail({
+      email: emailAddress,
+      subject: `Ticket Successfully Submitted`,
+      html: html
+    })
+  }
 
 }
 
