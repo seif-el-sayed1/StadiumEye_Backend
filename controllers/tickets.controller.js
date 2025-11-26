@@ -13,6 +13,7 @@ class TicketsController {
     //@access Public
     addTicket = asyncHandler(async (req, res, next) => {
         const ticket = await Tickets.create(req.body);
+        //TODO send email to admins and user
         res.status(201).json({ status: "success", data: ticket });
     })
 
