@@ -66,6 +66,15 @@ const stadiumSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+stadiumSchema.pre("findOneAndDelete", async function(next) {
+    const stadium = await this.model.findOne(this.getFilter());
+    if (!stadium) return next();
+
+    // Delete all tickets related to this stadium
+    await mongoose.model("Ticket").deleteMany({ stadium: stadium._id });
+    next();
+});
+
 
 
 module.exports = mongoose.model("Stadium", stadiumSchema);
