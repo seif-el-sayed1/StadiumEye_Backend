@@ -3,6 +3,7 @@ const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
 const Stadium = require("../models/stadium.model");
 const FirebaseController = require("./firebase.controller");
+const mongoose = require("mongoose");
 
 class StadiumController {
     // @desc  Add Stadium
@@ -21,7 +22,7 @@ class StadiumController {
     //@route GET /stadiums
     //@access Public
     getAllStadiums = asyncHandler(async (req, res, next) => {
-        const features = new ApiFeatures(Stadium.find(), req.query, "Stadium")
+        const features = new ApiFeatures(Stadium.find().populate("tickets", "area observations"), req.query, "Stadium")
         .search()
         .filter()
         .paginate()
@@ -45,15 +46,19 @@ class StadiumController {
     //@access Public
     getSingleStadium = asyncHandler(async (req, res, next) => {
         const { id } = req.params;
-        const stadium = await Stadium.findById(id).select("-__v - createdAt - updatedAt");
+
+        const stadium = await Stadium.findById(id).select("-__v -createdAt -updatedAt")
+            .populate("tickets", "area observations");
+
         if (!stadium) {
             return next(new ApiError(`No stadium found for this id ${id}`, 404));
         }
+
         res.status(200).json({
             status: "success",
-            stadium
+            data: stadium,
         });
-    })
+    });
 
     // @desc  Update Stadium
     // @route PUT /stadiums/:id
