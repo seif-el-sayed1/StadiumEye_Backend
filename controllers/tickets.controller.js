@@ -1,10 +1,13 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose")
 const ApiError = require('../utils/ApiError');
 const ApiFeatures = require("../utils/ApiFeatures");
 const Tickets = require("../models/ticket.model");
 const User = require("../models/user.model");
+const Admin = require("../models/admin.model");
+const Stadium = require("../models/stadium.model");
 const FirebaseController = require("./firebase.controller");
-const mongoose = require("mongoose")
+const EmailController = require("./email.controller");
 
 class TicketsController { 
 
@@ -12,10 +15,33 @@ class TicketsController {
     //@route POST /tickets
     //@access Public
     addTicket = asyncHandler(async (req, res, next) => {
-        const ticket = await Tickets.create(req.body);
-        //TODO send email to admins and user
+        let ticket = await Tickets.create(req.body);
+        ticket = await ticket.populate([
+            { 
+                path: 'stadium',
+                select: 'stadiumName'
+            },
+            { 
+                path: 'createdBy', 
+                select: 'firstName lastName email'
+            }
+        ]);
+
+        const stadium = await Stadium.findById(ticket.stadium);
+
+        stadium.tickets.push(ticket._id);
+        await stadium.save();
+
+        const admins = await Admin.find().select("email");
+        for (const admin of admins) {
+            await EmailController.reportEmailToAdmin(admin.email, ticket);
+        }
+        await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
+
+        
+
         res.status(201).json({ status: "success", data: ticket });
-    })
+    });
 
     //@decs  Get All Tickets
     //@route GET /tickets
@@ -64,10 +90,32 @@ class TicketsController {
     //@route GET /tickets/my
     //@access Private
     getMyTickets = asyncHandler(async (req, res, next) => {
-        const tickets = await Tickets.find({ createdBy: req.user._id });
-        if (!tickets) return next(new ApiError("Tickets not found", 404));
-        res.status(200).json({ status: "success", tickets});
-    })
+
+        const features = new ApiFeatures(Tickets.find({createdBy: req.user._id}), req.query, "Ticket")
+            .filter()
+            .paginate()
+            .cleanResponse();
+
+        let tickets = await features.query;
+
+        if (req.query.search) {
+            const keyword = req.query.search.toLowerCase();
+            tickets = tickets.filter(t =>
+                t.area?.toLowerCase().includes(keyword) ||
+                t.stadium?.stadiumName?.toLowerCase().includes(keyword)
+            );
+        }
+
+        res.status(200).json({
+            status: 'success',
+            totalResults: tickets.length,
+            pagination: {
+                page: Number(req.query.page) || 1,
+                limit: Number(req.query.limit) || 20,
+            },
+            tickets,
+        });
+    });
 
     //@desc Update Ticket
     //@route PUT /tickets/:id
@@ -119,6 +167,10 @@ class TicketsController {
         const ticket = await Tickets.findByIdAndDelete(id);
         if (!ticket) {
             return next(new ApiError(`Ticket Not Found`, 404));
+        }
+
+        if (ticket.status !== "open") {
+            return next(new ApiError(`Ticket is ${ticket.status} You can't delete`, 400));
         }
 
         if (ticket.ticketImages && ticket.ticketImages.length > 0) {
