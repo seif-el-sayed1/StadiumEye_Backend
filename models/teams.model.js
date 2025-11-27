@@ -18,4 +18,15 @@ const teamSchema = mongoose.Schema({
     ]
 }, { timestamps: true });
 
+
+teamSchema.pre(/^find/, function (next) {
+    this.populate({
+        path: "staff",
+        model: "User",
+        select: "firstName lastName email"
+    });
+    next();
+});
+
+
 module.exports = mongoose.model("Team", teamSchema);
