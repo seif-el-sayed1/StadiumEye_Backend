@@ -1,10 +1,9 @@
 exports.SUPER_ADMIN = "superAdmin";
 exports.ADMIN = "admin";
-exports.MANAGER = "manager";
 exports.USER = "user";
 exports.STAFF = "staff";
 
-exports.ROLES = [exports.SUPER_ADMIN, exports.ADMIN, exports.MANAGER, exports.USER, exports.STAFF];
+exports.ROLES = [exports.SUPER_ADMIN, exports.ADMIN, exports.USER, exports.STAFF];
 
 exports.LOGIN_TYPE_LIST = ["apple", "google", "email", "social"];
 exports.LOGIN_TYPE_PLATFORM_LIST = ["apple", "google", "social"];
