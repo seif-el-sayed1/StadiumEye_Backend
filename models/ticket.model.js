@@ -92,7 +92,7 @@ const ticketSchema = new mongoose.Schema({
 
 // TODO : TICKET VOICE
 
-ticketSchema.pre(/\bfind/, async function (next) {
+ticketSchema.pre(/^find/, async function (next) {
     this.populate({
         path: "stadium",
         model: "Stadium",
@@ -105,11 +105,6 @@ ticketSchema.pre(/\bfind/, async function (next) {
     });
     this.populate({
         path: "assignedTo",
-        model: "User",
-        select: "firstName lastName email"
-    });
-    this.populate({
-        path: "acceptedBy",
         model: "User",
         select: "firstName lastName email"
     });
