@@ -42,9 +42,21 @@ const ticketSchema = new mongoose.Schema({
         enum: TICKET_PRIORITIES,
         default: "medium"
     },
+    acceptedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+    rejectedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+    },
+    closedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     },
     visibility: {
         type: String,
@@ -78,6 +90,7 @@ const ticketSchema = new mongoose.Schema({
     
 }, { timestamps: true });
 
+// TODO : TICKET VOICE
 
 ticketSchema.pre(/\bfind/, async function (next) {
     this.populate({
@@ -94,7 +107,17 @@ ticketSchema.pre(/\bfind/, async function (next) {
         path: "assignedTo",
         model: "User",
         select: "firstName lastName email"
-    })
+    });
+    this.populate({
+        path: "acceptedBy",
+        model: "User",
+        select: "firstName lastName email"
+    });
+    this.populate({
+        path: "acceptedBy",
+        model: "User",
+        select: "firstName lastName email"
+    });
     next();
 });
 
