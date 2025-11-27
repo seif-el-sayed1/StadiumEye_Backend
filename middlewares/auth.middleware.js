@@ -2,11 +2,12 @@ const asyncHandler = require("express-async-handler");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const Admin = require("../models/admin.model");
+const Staff = require("../models/staff.model");
 const ApiError = require("../utils/ApiError");
 const { translate } = require("../utils/translation");
 
 // Constants
-const { ADMIN, SUPERVISOR, USER, ROLES } = require("../utils/constants");
+const { ADMIN, STAFF, USER, ROLES } = require("../utils/constants");
 
 // === Check user authentication and authorization function ===
 const checkUser = async (Model, token, decoded, next) => {
@@ -75,6 +76,11 @@ exports.protect = asyncHandler(async (req, res, next) => {
     case ADMIN:
       currentUser = await checkUser(Admin, token, decoded, next);
       req.role = ADMIN;
+      req.userId = decoded.userId;
+      break;
+    case STAFF:
+      currentUser = await checkUser(Staff, token, decoded, next);
+      req.role = STAFF;
       req.userId = decoded.userId;
       break;
     case USER:
