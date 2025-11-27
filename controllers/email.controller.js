@@ -133,6 +133,25 @@ class EmailController {
     })
   }
 
+  passwordCreateEmail(token, emailAddress) {
+    const html = generateHTML({
+      link: process.env.LANDING_URL,
+      emailTitle: "Create your account password",
+      emailSubTitle: "Tap the button below to Create your account password.",
+      btnText: "Create Password",
+      btnLink: process.env.STAFF_CREATE_PASSWORD + token,
+      belowText: "You can login from here:",
+      belowLink: process.env.LANDING_URL,
+      footerNote: `You are receiving this email because a request to Create the password for your ${process.env.APP_NAME} account has been initiated. If you did not initiate this action, please disregard this message.`,
+      footerLink: process.env.APP_NAME
+    });
+    sendEmail({
+      email: emailAddress,
+      subject: `${process.env.APP_NAME} Password Creation`,
+      html: html
+    });
+  }
+
 }
 
 module.exports = new EmailController();
