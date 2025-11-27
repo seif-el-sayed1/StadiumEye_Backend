@@ -1,6 +1,6 @@
 const express = require("express");
 
-const { USER } = require("../utils/constants");
+const { USER, STAFF } = require("../utils/constants");
 
 // Middlewares
 const { protect, allowedTo } = require("../middlewares/auth.middleware");
@@ -40,13 +40,13 @@ router
 router.patch(
   "/change-password",
   protect,
-  allowedTo(USER),
+  allowedTo(USER, STAFF),
   GlobalValidator.validateChangePassword,
   UserAuthController.updateLoggedUserPassword
 );
 
 router.post("/verify-otp", UserAuthController.verifyOtp);
 router.post("/send-otp", GlobalValidator.sendOtpValidator, UserAuthController.sendOtp);
-router.post("/log-out", protect, allowedTo(USER), UserAuthController.logOut);
+router.post("/log-out", protect, allowedTo(USER, STAFF), UserAuthController.logOut);
 
 module.exports = router;
