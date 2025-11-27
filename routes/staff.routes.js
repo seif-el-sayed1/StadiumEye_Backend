@@ -22,6 +22,10 @@ router
         allowedTo(ADMIN, SUPER_ADMIN),
         StaffValidator.validateAddStaff,
         StaffController.addStaff
+    ).get(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StaffController.getAllStaff
     )
 
 router  
