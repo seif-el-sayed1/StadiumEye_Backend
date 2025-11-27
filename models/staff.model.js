@@ -10,6 +10,15 @@ const staffSchema = mongoose.Schema({
     },
 }, { timestamps: true });
 
+staffSchema.pre(/^find/, function (next) {
+    this.populate({
+        path: "team",
+        model: "Team",
+        select: "teamName teamType"
+    });
+    next();
+});
+
 
 
 const Staff = User.discriminator(STAFF, staffSchema);
