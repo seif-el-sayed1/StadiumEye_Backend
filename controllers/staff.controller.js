@@ -1,10 +1,11 @@
 const asyncHandler = require("express-async-handler");
 const crypto = require("crypto");
-const ApiError = require("../utils/ApiError");
-const ApiFeature = require("../utils/ApiFeatures");
-const Staff = require("../models/staff.model");
-const EmailController = require("./email.controller");
 const mongoose = require("mongoose");
+const ApiError = require("../utils/ApiError");
+const ApiFeatures = require("../utils/ApiFeatures");
+const Staff = require("../models/staff.model");
+const Team = require("../models/teams.model");
+const EmailController = require("./email.controller");
 
 const { STAFF } = require("../utils/constants");
 
@@ -26,9 +27,11 @@ class StaffController {
             const passwordVerificationToken = await staff.generatePasswordVerificationToken(session);
             await staff.save({ session });
 
-            console.log(passwordVerificationToken);
             // Send verification mail
             await EmailController.passwordCreateEmail(passwordVerificationToken, email);
+            const team = await Team.findById(req.body.team);
+            team.staff.push(staff._id);
+            await team.save({ session });
             await session.commitTransaction();
             // response
             res.status(201).json({
@@ -77,6 +80,28 @@ class StaffController {
         });
     });
 
+    //@desc    Get all staffs
+    //@route   GET /staff
+    //@access  Private (SA)
+    getAllStaff = asyncHandler(async (req, res, next) => {
+        const features = new ApiFeatures(Staff.find().select("firstName lastName email team"), req.query, "Team")
+            .search()
+            .filter()
+            .paginate()
+            .cleanResponse();
+
+        const staff = await features.query; 
+
+        res.status(200).json({
+            status: 'success',
+            totalResults: staff.length,
+            pagination: {
+                page: Number(req.query.page) || 1,
+                limit: Number(req.query.limit) || 20,
+            },
+            staff
+        });
+    })
 
 }
 
