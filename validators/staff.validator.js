@@ -3,14 +3,14 @@ const asyncHandler = require("express-async-handler");
 const joiErrorHandler = require("./joiErrorHandler");
 const { objectIdValidator, phoneNumberValidator } = require("./validatorComponents");
 const ApiError = require("../utils/ApiError");
-const { translate } = require("../utils/translation");
-const City = require("../models/city.model");
-
+const Team = require("../models/teams.model");
 const { checkIfPhoneStartsWithPlus2 } = require("../middlewares/phoneNumberChecker.middleware");
-
 
 class StaffValidator {
     validateAddStaff = asyncHandler(async (req, res, next) => {
+        const { team } = req.body;
+        const teamExists = await Team.findById(team);
+        if (!teamExists) return next(new ApiError("Team does not exist", 400));
         const schema = Joi.object({
             firstName: Joi.string().required(),
             lastName: Joi.string().required(),
