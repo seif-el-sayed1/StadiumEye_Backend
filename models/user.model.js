@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const {
   USER,
-  MANAGER,
   STAFF,
   LOGIN_TYPE_LIST,
 } = require("../utils/constants");
@@ -28,7 +28,7 @@ const userSchema = mongoose.Schema(
     },
     role: {
       type: String,
-      enum: [USER, MANAGER, STAFF],
+      enum: [USER, STAFF],
       default: USER
     },
     lastName: {
@@ -58,7 +58,6 @@ const userSchema = mongoose.Schema(
     },
     profilePicture: {
       type: String,
-      required: false,
       default: ""
     },
     city: {
@@ -79,16 +78,6 @@ const userSchema = mongoose.Schema(
     password: {
       type: String,
       minLength: [6, "Too short password"],
-      validate: {
-        validator: function (v) {
-          if (this.loginType || this.loginType === "google" || this.loginType === "apple") {
-            return true;
-          }
-          return v && v.length >= 8;
-        },
-        message: (props) =>
-          `${props.value} is not a valid password! Password must be at least 8 characters long`
-      }
     },
     passwordChangedAt: Date,
     passwordResetCode: String,
@@ -98,6 +87,8 @@ const userSchema = mongoose.Schema(
     verificationCode: String,
     verificationCodeExp: Date,
     verificationCodeVerified: Boolean,
+    passwordVerificationToken: String,
+    passwordResetExpiresAt: Date,
     isVerified: {
       type: Boolean,
       default: false
@@ -155,8 +146,6 @@ userSchema.virtual("fullName").get(function () {
       this.lastName.charAt(0).toUpperCase() +
       this.lastName.slice(1)
     );
-  else if (this.ownerName && this.entityName)
-    return this.entityName.charAt(0).toUpperCase() + this.entityName.slice(1);
 });
 
 userSchema.virtual("age").get(function () {
@@ -173,13 +162,7 @@ userSchema.virtual("age").get(function () {
   return age || undefined;
 });
 
-// Middleware to check if password is required
-userSchema.pre("validate", function (next) {
-  if (this.loginType === "email" && !this.password) {
-    this.invalidate("password", "Password is required");
-  }
-  next();
-});
+
 userSchema.methods.generateToken = async function () {
   const tokenExpDate = new Date(); // Get the current date
   tokenExpDate.setDate(
@@ -259,5 +242,21 @@ userSchema.pre("save", async function (next) {
   this.passwordChangedAt = Date.now() - 1000;
   next();
 });
+
+userSchema.methods.generatePasswordVerificationToken = async function (session) {
+  // Generate a random token
+  const passwordCreationToken = crypto.randomBytes(32).toString("hex");
+  console.log("Generated Token:", passwordCreationToken);
+  // Hash the token before storing it in the DB
+  const hashedToken = crypto.createHash("sha256").update(passwordCreationToken).digest("hex");
+
+  // Set the token and expiration in the schema
+  this.passwordVerificationToken = hashedToken;
+  this.passwordResetExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+  // Save the admin document with the token
+  await this.save({ validateBeforeSave: false });
+
+  return passwordCreationToken;
+};
 
 module.exports = mongoose.model("User", userSchema);
