@@ -10,6 +10,7 @@ let userAuthRoutes = require("./userAuth.routes")
 let stadiumRoutes = require("./stadium.routes");
 let ticketRoutes = require("./tickets.routes");
 let staffRoutes  = require("./staff.routes");
+let teamRoutes = require("./team.routes");
 
 const { app } = require("firebase-admin");
 
@@ -22,6 +23,7 @@ appRouter.use(`${BASE_URL}/cities`, cityRoutes);
 appRouter.use(`${BASE_URL}/stadiums`, stadiumRoutes);
 appRouter.use(`${BASE_URL}/tickets`, ticketRoutes);
 appRouter.use(`${BASE_URL}/staff`, staffRoutes);
+appRouter.use(`${BASE_URL}/teams`, teamRoutes);
 
 
 
