@@ -1,9 +1,9 @@
 const generateHTML = ({
   link = process.env.FRONTEND_URL,
   logo = process.env.LOGO_URL,
-  primaryColor = "#FFD700",
-  backgroundColor = "#0000", 
-  secondaryColor = "#4CAF50",
+  backgroundColor = "#ffffff",
+  primaryColor = process.env.PRIMARY_COLOR,
+  secondaryColor = "#ffffff",
   emailTitle,
   emailSubTitle,
   btnText,
