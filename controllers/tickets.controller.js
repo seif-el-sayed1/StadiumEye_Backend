@@ -48,9 +48,10 @@ class TicketsController {
     //@access Private
     getAllTickets = asyncHandler(async (req, res, next) => {
         const features = new ApiFeatures(Tickets.find(), req.query, "Ticket")
-            .filter()
-            .paginate()
-            .cleanResponse();
+        .filter()
+        .paginate()
+        .sort()
+        .cleanResponse();
 
         let tickets = await features.query;
 
@@ -63,6 +64,21 @@ class TicketsController {
                 t.createdBy?.lastName?.toLowerCase().includes(keyword)
             );
         }
+
+        if (req.query.sort === "-priority") {
+            const PRIORITY_ORDER = ["low", "medium", "hard", "critical"];
+            tickets = tickets.sort((a, b) =>
+                PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)
+            );
+        }
+
+        if (req.query.sort === "priority") {
+            const PRIORITY_ORDER = ["low", "medium", "hard", "critical"];
+            tickets = tickets.sort((a, b) =>
+                PRIORITY_ORDER.indexOf(b.priority) - PRIORITY_ORDER.indexOf(a.priority)
+            );
+        }
+
 
         res.status(200).json({
             status: 'success',
@@ -77,7 +93,7 @@ class TicketsController {
 
     //@decs  Get One Ticket
     //@route GET /tickets/:id
-    //@access Private
+    //@access Private   
     getOneTicket = asyncHandler(async (req, res, next) => {
         const { id } = req.params
 
@@ -94,6 +110,7 @@ class TicketsController {
         const features = new ApiFeatures(Tickets.find({createdBy: req.user._id}), req.query, "Ticket")
             .filter()
             .paginate()
+            .sort()
             .cleanResponse();
 
         let tickets = await features.query;
