@@ -42,6 +42,23 @@ class ApiFeatures {
         return this;
     }
 
+    sort() {
+        if (this.queryString.sort) {
+            const sortType = this.queryString.sort;
+
+            if (sortType === "latest") {
+                this.query = this.query.sort({ createdAt: -1 }); // newest first
+            } else if (sortType === "oldest") {
+                this.query = this.query.sort({ createdAt: 1 }); // oldest first
+            }
+        } else {
+            this.query = this.query.sort({ createdAt: -1 });
+        }
+
+        return this;
+    }
+
+
     paginate() {
         const page = this.queryString.page ? Number(this.queryString.page) : 1;
         const limit = this.queryString.limit ? Number(this.queryString.limit) : 20;
