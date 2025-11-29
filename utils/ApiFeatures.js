@@ -30,14 +30,40 @@ class ApiFeatures {
 
     filter() {
         const queryObj = { ...this.queryString };
-        // remove common fields from query
+
+        // remove common fields
         const removeFields = ["search", "page", "limit", "sort", "select"];
         removeFields.forEach((key) => delete queryObj[key]);
-        // search by any query parameter
-        let queryStr = JSON.stringify(queryObj);
-        queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (m) => `$${m}`);
 
-        this.query = this.query.find(JSON.parse(queryStr));
+        // Handle date range safely
+        if (queryObj.startDate || queryObj.endDate) {
+            queryObj.createdAt = {};
+            if (queryObj.startDate) {
+                const start = new Date(queryObj.startDate);
+                if (!isNaN(start)) queryObj.createdAt.$gte = start;
+                delete queryObj.startDate;
+            }
+            if (queryObj.endDate) {
+                const end = new Date(queryObj.endDate);
+                if (!isNaN(end)) queryObj.createdAt.$lte = end;
+                delete queryObj.endDate;
+            }
+            if (Object.keys(queryObj.createdAt).length === 0) delete queryObj.createdAt;
+        }
+
+        // Convert operators like gt, gte, lt, lte ONLY for non-date fields
+        const operators = ["gt", "gte", "lt", "lte"];
+        for (const key in queryObj) {
+            if (!queryObj[key] || typeof queryObj[key] !== "object") continue;
+            for (const op of operators) {
+                if (queryObj[key][op] !== undefined) {
+                    queryObj[key]["$" + op] = queryObj[key][op];
+                    delete queryObj[key][op];
+                }
+            }
+        }
+
+        this.query = this.query.find(queryObj);
 
         return this;
     }
@@ -57,7 +83,6 @@ class ApiFeatures {
 
         return this;
     }
-
 
     paginate() {
         const page = this.queryString.page ? Number(this.queryString.page) : 1;
