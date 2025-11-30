@@ -1,6 +1,9 @@
 ﻿from ultralytics import YOLO
 import cv2, os, sys, json
 from collections import defaultdict
+import torch
+
+torch.serialization.add_safe_globals(["ultralytics.nn.tasks.DetectionModel"])
 
 # Video input
 input_path = sys.argv[1]
@@ -47,23 +50,24 @@ while True:
         xyxy = box.xyxy[0].cpu().numpy().astype(int)
         x1, y1, x2, y2 = xyxy
 
-        summary[cls].append((conf, class_names[cls]))
+        summary[cls].append((conf, class_names[cls], x1, y1, x2, y2))
 
 cap.release()
 
 # Prepare JSON output
-data = [
-    {
+data = []
+for cls, lst in summary.items():
+    avg_conf = round(sum(conf for conf, *_ in lst) / len(lst), 2)
+    _, _, x1, y1, x2, y2 = lst[-1]
+    data.append({
         "Id": cls,
         "ClassName": class_names[cls],
-        "confidence": round(sum(conf for conf, _ in lst) / len(lst), 2),
-        "x": round(float(x1)),
-        "y": round(float(y1)),
-        "width": round(width),
-        "height": round(height)
-    }
-    for cls, lst in summary.items()
-]
+        "confidence": avg_conf,
+        "x": int(x1),
+        "y": int(y1),
+        "width": int(x2 - x1),
+        "height": int(y2 - y1)
+    })
 
 # Save JSON if path provided
 if output_path:

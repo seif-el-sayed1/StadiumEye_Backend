@@ -2,6 +2,9 @@
 import json
 from ultralytics import YOLO
 import os
+import torch
+
+torch.serialization.add_safe_globals(["ultralytics.nn.tasks.DetectionModel"])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(BASE_DIR, "yolo_model.pt")

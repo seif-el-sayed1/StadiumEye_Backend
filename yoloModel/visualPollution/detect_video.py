@@ -1,6 +1,9 @@
 ﻿from ultralytics import YOLO
 import cv2, os, sys, json
 from collections import defaultdict
+import torch
+
+torch.serialization.add_safe_globals(["ultralytics.nn.tasks.DetectionModel"])
 
 # Video input
 input_path = sys.argv[1]
@@ -39,7 +42,7 @@ class_names = [
 
 summary = defaultdict(list)
 
-# Process each frame individually to avoid dummy video output
+# Process each frame individually
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -52,7 +55,7 @@ while True:
     for box in boxes:
         cls = int(box.cls[0])
         conf = float(box.conf[0])
-        xyxy = box.xyxy[0].cpu().numpy().astype(int)
+        xyxy = box.xyxy[0].cpu().numpy().astype(int) 
         x1, y1, x2, y2 = xyxy
 
         summary[cls].append((conf, class_names[cls]))
