@@ -36,7 +36,8 @@ class TicketsValidator {
             lessonsLearned: Joi.string().optional(),
             ticketVideos: Joi.array().items(Joi.string().uri()).optional(),
             ticketImages: Joi.array().items(Joi.string().uri()).optional(),
-            locationLink: Joi.string().required()
+            locationLink: Joi.string().required(),
+            modelType: Joi.string().valid("safety", "visualPollution").required(),
         })
         req.body.createdBy = req.user._id;
 
