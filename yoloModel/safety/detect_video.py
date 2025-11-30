@@ -2,8 +2,10 @@
 import cv2, os, sys, json
 from collections import defaultdict
 import torch
+from ultralytics.nn.tasks import DetectionModel  
 
-torch.serialization.add_safe_globals(["ultralytics.nn.tasks.DetectionModel"])
+# Add DetectionModel to safe globals
+torch.serialization.add_safe_globals([DetectionModel])
 
 # Video input
 input_path = sys.argv[1]
@@ -34,13 +36,12 @@ class_names = [
 
 summary = defaultdict(list)
 
-# Process each frame individually to avoid dummy video output
+# Process each frame individually
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    # Run YOLO detection on single frame
     results = model(frame, verbose=False, save=False, save_txt=False)
 
     boxes = results[0].boxes
