@@ -13,4 +13,5 @@ import-data.js
 serviceAccount-Firebase-*.json
 *-data.json
 *.txt
+!requirements.txt
 yolo_model.pt
