@@ -8,6 +8,7 @@ const Admin = require("../models/admin.model");
 const Stadium = require("../models/stadium.model");
 const FirebaseController = require("./firebase.controller");
 const EmailController = require("./email.controller");
+const  processDetections  = require("../utils/processDetections");
 
 class TicketsController { 
 
@@ -15,32 +16,71 @@ class TicketsController {
     //@route POST /tickets
     //@access Public
     addTicket = asyncHandler(async (req, res, next) => {
-        let ticket = await Tickets.create(req.body);
-        ticket = await ticket.populate([
-            { 
-                path: 'stadium',
-                select: 'stadiumName'
-            },
-            { 
-                path: 'createdBy', 
-                select: 'firstName lastName email'
+        try {
+            const ticket = await Tickets.create(req.body); 
+
+            await ticket.populate([
+                { path: 'stadium', select: 'stadiumName' },
+                { path: 'createdBy', select: 'firstName lastName email' }
+            ]);
+
+            const stadium = await Stadium.findById(ticket.stadium);
+
+            stadium.tickets.push(ticket._id);
+            await stadium.save();
+
+            const admins = await Admin.find().select("email");
+            for (const admin of admins) {
+                await EmailController.reportEmailToAdmin(admin.email, ticket);
             }
-        ]);
+            await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
 
-        const stadium = await Stadium.findById(ticket.stadium);
+            const modelType = req.body.modelType || "safety";
 
-        stadium.tickets.push(ticket._id);
-        await stadium.save();
+            if (req.body.ticketImages && req.body.ticketImages.length > 0) {
+                for (const imgUrl of req.body.ticketImages) {
+                    const detections = await processDetections(imgUrl, modelType, "image"); 
+                    await Tickets.findByIdAndUpdate(
+                        ticket._id,
+                        {
+                            $push: {
+                                ticketDetections: {
+                                    url: imgUrl,
+                                    type: "image",
+                                    modelType,
+                                    detections
+                                }
+                            }
+                        }
+                    );
+                }
+            }
 
-        const admins = await Admin.find().select("email");
-        for (const admin of admins) {
-            await EmailController.reportEmailToAdmin(admin.email, ticket);
+            if (req.body.ticketVideos && req.body.ticketVideos.length > 0) {
+                for (const vidUrl of req.body.ticketVideos) {
+                    const detections = await processDetections(vidUrl, modelType, "video");
+                    await Tickets.findByIdAndUpdate(
+                        ticket._id,
+                        {
+                            $push: {
+                                ticketDetections: {
+                                    url: vidUrl,
+                                    type: "video",
+                                    modelType,
+                                    detections
+                                }
+                            }
+                        }
+                    );
+                }
+            }
+
+            const populatedTicket = await Tickets.findById(ticket._id);
+            res.status(201).json({ status: "success", data: populatedTicket });
+
+        } catch (error) {
+            next(error);
         }
-        await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
-
-        
-
-        res.status(201).json({ status: "success", data: ticket });
     });
 
     //@decs  Get All Tickets
