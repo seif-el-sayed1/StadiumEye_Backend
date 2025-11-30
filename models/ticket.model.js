@@ -85,8 +85,26 @@ const ticketSchema = new mongoose.Schema({
         coordinates: {
             type: [Number], // [lng, lat]
             default: [0, 0]
-        }
+        },
     },
+    ticketDetections: [
+        {
+            url: String,       
+            type: { type: String, enum: ["image", "video"] },
+            modelType: { type: String, enum: ["safety", "visualPollution"] }, 
+            detections: [
+                {
+                    Id: Number,
+                    ClassName: String,
+                    confidence: Number,
+                    x: Number,
+                    y: Number,
+                    width: Number,
+                    height: Number
+                }
+            ]
+        }
+    ]
     
 }, { timestamps: true });
 
