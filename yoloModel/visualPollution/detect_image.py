@@ -5,7 +5,8 @@ import os
 import torch
 from ultralytics.nn.tasks import DetectionModel  
 
-torch.serialization.add_safe_globals([DetectionModel])
+# Add DetectionModel and Sequential to safe globals
+torch.serialization.add_safe_globals([DetectionModel, torch.nn.modules.container.Sequential])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(BASE_DIR, "yolo_model.pt")

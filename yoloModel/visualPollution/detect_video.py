@@ -4,8 +4,8 @@ from collections import defaultdict
 import torch
 from ultralytics.nn.tasks import DetectionModel  
 
-# Add DetectionModel to safe globals
-torch.serialization.add_safe_globals([DetectionModel])
+# Add DetectionModel and Sequential to safe globals
+torch.serialization.add_safe_globals([DetectionModel, torch.nn.modules.container.Sequential])
 
 # Video input
 input_path = sys.argv[1]
