@@ -13,4 +13,5 @@ import-data.js
 serviceAccount-Firebase-*.json
 *-data.json
 *.txt
+!runtime.txt
 !requirements.txt
