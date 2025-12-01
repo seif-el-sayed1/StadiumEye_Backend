@@ -26,7 +26,7 @@ const processDetections = async (url, modelType, fileType = "image") => {
     console.log("Running Python script at: ".green.bold + pythonScript.yellow.bold); 
 
     const detections = await new Promise((resolve, reject) => {
-        exec(`py -3.11 "${pythonScript}" "${tempFile}"`, (err, stdout, stderr) => {
+        exec(`python "${pythonScript}" "${tempFile}"`, (err, stdout, stderr) => {
             try {
                 if (fs.existsSync(tempFile)) {
                     fs.unlinkSync(tempFile);
