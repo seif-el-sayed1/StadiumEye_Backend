@@ -2,6 +2,6 @@ torch==2.1.0
 torchvision==0.16.0
 torchaudio==2.1.0
 ultralytics==8.1.0
-opencv-python
-numpy<2
-requests
+opencv-python==4.7.0.72
+numpy<2,>=1.24.0
+requests>=2.30.0,<3
