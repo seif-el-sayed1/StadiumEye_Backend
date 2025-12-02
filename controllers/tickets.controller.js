@@ -39,39 +39,47 @@ class TicketsController {
 
             if (req.body.ticketImages && req.body.ticketImages.length > 0) {
                 for (const imgUrl of req.body.ticketImages) {
-                    const detections = await processDetections(imgUrl, modelType, "image"); 
-                    await Tickets.findByIdAndUpdate(
-                        ticket._id,
-                        {
-                            $push: {
-                                ticketDetections: {
-                                    url: imgUrl,
-                                    type: "image",
-                                    modelType,
-                                    detections
-                                }
+                    const rawDetections = await processDetections(imgUrl, modelType, "image");
+
+                    const detections = Array.isArray(rawDetections)
+                        ? rawDetections
+                        : Array.isArray(rawDetections?.detections)
+                            ? rawDetections.detections
+                            : [];
+
+                    await Tickets.findByIdAndUpdate(ticket._id, {
+                        $push: {
+                            ticketDetections: {
+                                url: imgUrl,
+                                type: "image",
+                                modelType,
+                                detections
                             }
                         }
-                    );
+                    });
                 }
             }
 
             if (req.body.ticketVideos && req.body.ticketVideos.length > 0) {
                 for (const vidUrl of req.body.ticketVideos) {
-                    const detections = await processDetections(vidUrl, modelType, "video");
-                    await Tickets.findByIdAndUpdate(
-                        ticket._id,
-                        {
-                            $push: {
-                                ticketDetections: {
-                                    url: vidUrl,
-                                    type: "video",
-                                    modelType,
-                                    detections
-                                }
+                    const rawDetections = await processDetections(vidUrl, modelType, "video");
+
+                    const detections = Array.isArray(rawDetections)
+                        ? rawDetections
+                        : Array.isArray(rawDetections?.detections)
+                            ? rawDetections.detections
+                            : [];
+
+                    await Tickets.findByIdAndUpdate(ticket._id, {
+                        $push: {
+                            ticketDetections: {
+                                url: vidUrl,
+                                type: "video",
+                                modelType,
+                                detections
                             }
                         }
-                    );
+                    });
                 }
             }
 
