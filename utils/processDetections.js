@@ -1,33 +1,53 @@
+const { exec } = require("child_process");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const FormData = require("form-data");
 
-const processDetections = async (fileUrl, modelType, fileType = "image") => {
+const processDetections = async (url, modelType, fileType = "image") => {
     const ext = fileType === "video" ? ".mp4" : ".jpg";
     const tempFile = path.join(__dirname, "temp_" + Date.now() + ext);
 
     const writer = fs.createWriteStream(tempFile);
-    const response = await axios({ url: fileUrl, method: "GET", responseType: "stream" });
+    const response = await axios({ url, method: "GET", responseType: "stream" });
     response.data.pipe(writer);
     await new Promise((resolve, reject) => {
         writer.on("finish", resolve);
         writer.on("error", reject);
     });
 
-    const serviceUrl = "http://localhost:8000/detect"; 
+    const pythonScript = modelType === "safety"
+        ? path.resolve(__dirname, "..", "yoloModel", "safety", fileType === "video" ? "detect_video.py" : "detect_image.py")
+        : path.resolve(__dirname, "..", "yoloModel", "visualPollution", fileType === "video" ? "detect_video.py" : "detect_image.py");
 
-    const formData = new FormData();
-    formData.append("file", fs.createReadStream(tempFile));
-    formData.append("modelType", modelType);
-    formData.append("fileType", fileType);
+    if (!fs.existsSync(pythonScript)) {
+        throw new Error(`Python script not found at path: ${pythonScript}`);
+    }
 
-    const res = await axios.post(serviceUrl, formData, {
-        headers: formData.getHeaders()
+    console.log("Running Python script at: ".green.bold + pythonScript.yellow.bold); 
+
+    const detections = await new Promise((resolve, reject) => {
+        exec(`python "${pythonScript}" "${tempFile}"`, (err, stdout, stderr) => {
+            try {
+                if (fs.existsSync(tempFile)) {
+                    fs.unlinkSync(tempFile);
+                }
+            } catch (unlinkErr) {
+                console.error("Failed to delete temp file:", unlinkErr);
+            }
+
+            if (err) {
+                console.error(stderr);
+                return reject(err);
+            }
+            try {
+                resolve(JSON.parse(stdout));
+            } catch (parseErr) {
+                reject(parseErr);
+            }
+        });
     });
 
-    fs.unlinkSync(tempFile);
-    return res.data.detections;
+    return detections;
 };
 
 module.exports = processDetections;
