@@ -14,6 +14,6 @@ exports.SERVICES_LIST = ["parking", "seats", "entry", "security"]
 exports.STADIUM_AREA = ["northStand", "southStand", "eastStand", 
                         "westStand", "vip", "emergency", "concourse",
                         "parkingArea", "mediaZone", "fieldLevel"];
-exports.TICKET_STATUS = ["open","inProgress", "resolved", "closed"];
+exports.TICKET_STATUS = ["open","inProgress", "resolved", "closed", "rejected"];
 exports.TICKET_PRIORITIES = ["low", "medium", "high", "critical"];
 exports.TICKET_TYPES = ["negative", "positive", "issue", "suggestion"]
