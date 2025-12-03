@@ -192,8 +192,11 @@ class TicketsController {
         if (!oldTicket) {
             return next(new ApiError(`Ticket Not Found`, 404));
         }
-        
 
+        if (ticket.status !== "open") {
+            return next(new ApiError(`Ticket is ${ticket.status} You can't delete`, 400));
+        }
+        
         if (req.body.ticketVideos) {
             const oldVideos = oldTicket.ticketVideos || [];
             const newVideos = req.body.ticketVideos || [];
