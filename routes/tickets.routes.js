@@ -95,14 +95,6 @@ router
     )
 
 router
-    .route("/:id/assign")
-    .patch(
-        protect, 
-        allowedTo(ADMIN, SUPER_ADMIN),
-        TicketsController.assignTicket
-    )
-
-router
     .route("/:id/before-after")
     .patch(
         protect, 
