@@ -1,7 +1,7 @@
 const express = require("express");
 
 //constants
-const { ADMIN, SUPER_ADMIN, USER } = require("../utils/constants");
+const { ADMIN, SUPER_ADMIN, USER, STAFF } = require("../utils/constants");
 
 
 //middleware
@@ -21,7 +21,7 @@ router
     .route("/")
     .post(
         protect, 
-        allowedTo(USER, ADMIN, SUPER_ADMIN),
+        allowedTo(USER, ADMIN, SUPER_ADMIN, STAFF),
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
         FirebaseController.uploadMultipleVideos("ticketVideos"),
@@ -63,11 +63,19 @@ router
     )
 
 router
-    .route("/:id/status")
+    .route("/:id/assign-reject")
     .patch(
         protect, 
-        allowedTo(ADMIN, SUPER_ADMIN),
-        TicketsController.changeStatus
+        // allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsController.assignOrRejectTicket
+    )
+
+router
+    .route("/:id/closed")
+    .patch(
+        protect, 
+        // allowedTo(ADMIN, SUPER_ADMIN),
+        TicketsController.closeTicket
     )
 
 router
