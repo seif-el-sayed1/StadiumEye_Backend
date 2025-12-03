@@ -37,8 +37,16 @@ class TicketsValidator {
             ticketVideos: Joi.array().items(Joi.string().uri()).optional(),
             ticketImages: Joi.array().items(Joi.string().uri()).optional(),
             locationLink: Joi.string().required(),
-            modelType: Joi.string().valid("safety", "visualPollution").required(),
-        })
+            modelType: Joi.string()
+            .valid("safety", "visualPollution")
+            .when("ticketImages", {
+                is: Joi.array().min(1),
+                then: Joi.required(),
+            })
+            .when("ticketVideos", {
+                is: Joi.array().min(1),
+                then: Joi.required(),
+            }),        })
         req.body.createdBy = req.user._id;
 
         joiErrorHandler(schema, req);
