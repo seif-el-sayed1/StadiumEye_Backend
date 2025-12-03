@@ -21,7 +21,7 @@ router
     .route("/")
     .post(
         protect, 
-        allowedTo(USER, ADMIN, SUPER_ADMIN, STAFF),
+        allowedTo(USER),
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
         FirebaseController.uploadMultipleVideos("ticketVideos"),
@@ -45,11 +45,11 @@ router
     .route("/:id")
     .get(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN, USER, STAFF),
         TicketsController.getOneTicket
     ).patch(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(USER),
         TicketsValidator.checkIfTicketIsOpen,
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
@@ -58,7 +58,7 @@ router
         TicketsController.updateTicket
     ).delete(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN, USER),
         TicketsController.deleteTicket
     )
 
@@ -66,7 +66,7 @@ router
     .route("/:id/assign-reject")
     .patch(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(STAFF, ADMIN, SUPER_ADMIN),
         TicketsController.assignOrRejectTicket
     )
 
@@ -74,7 +74,7 @@ router
     .route("/:id/closed")
     .patch(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN, STAFF),
         TicketsController.closeTicket
     )
 
@@ -82,7 +82,7 @@ router
     .route("/:id/priority")
     .patch(
         protect, 
-        allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN, STAFF),
         TicketsController.choosePriority
     )
 
@@ -90,7 +90,7 @@ router
     .route("/:id/visibility")
     .patch(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN, USER, STAFF),
         TicketsController.changeVisibility
     )
 
@@ -98,7 +98,7 @@ router
     .route("/:id/before-after")
     .patch(
         protect, 
-        // allowedTo(ADMIN, SUPER_ADMIN),
+        allowedTo(ADMIN, SUPER_ADMIN, STAFF),
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
         TicketsController.uploadBeforeAfterImages
