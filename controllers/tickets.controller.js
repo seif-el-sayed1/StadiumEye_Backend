@@ -4,6 +4,7 @@ const ApiError = require('../utils/ApiError');
 const ApiFeatures = require("../utils/ApiFeatures");
 const Tickets = require("../models/ticket.model");
 const User = require("../models/user.model");
+const Team = require("../models/teams.model");
 const Admin = require("../models/admin.model");
 const Stadium = require("../models/stadium.model");
 const FirebaseController = require("./firebase.controller");
@@ -260,24 +261,83 @@ class TicketsController {
         });
     });
 
-    //@desc Change Status
+    //@desc assign or reject ticket
     //@route Patch /tickets/:id/status
     //@access Private
-    changeStatus = asyncHandler(async (req, res, next) => {
-        const { id } = req.params
+    assignOrRejectTicket = asyncHandler(async (req, res, next) => {
+        const { status, assignedTo } = req.body;
+        const { id } = req.params;
+
         const ticket = await Tickets.findById(id);
         if (!ticket) return next(new ApiError("Ticket not found", 404));
-        
-        if (ticket.status === req.body.status) return next(new ApiError(`Ticket is already ${ticket.status}`, 400));
 
-        ticket.status = req.body.status;
+        if (ticket.status !== "open") {
+            return next(new ApiError(`Ticket is ${ticket.status} You can't update`, 400));
+        }
+
+        if (!status && !assignedTo) {
+            return next(new ApiError("Reject or assign ticket", 400));
+        }
+
+        if (assignedTo) {
+            if (!mongoose.isValidObjectId(assignedTo))
+                return next(new ApiError("Invalid team id", 400));
+
+            if (status)
+                return next(new ApiError("Can't assign and choose status at the same time", 400));
+
+            const team = await Team.findById(assignedTo);
+            if (!team) return next(new ApiError("Team not found", 404));
+
+            if (team.teamType === "reports")
+                return next(new ApiError("Can't assign to reports team", 400));
+
+            ticket.assignedTo = assignedTo;
+            ticket.assignedBy = req.user._id;
+            ticket.status = "inProgress";
+            await ticket.save();
+
+            return res.status(200).json({
+                status: "success",
+                message: "Ticket assigned successfully",
+                ticket,
+            });
+        }
+
+        if (status !== "rejected") {
+            return next(new ApiError("Only rejected status is allowed", 400));
+        }
+
+        ticket.status = "rejected";
+        ticket.rejectedBy = req.user._id;
+        await ticket.save();
+
+        res.status(200).json({
+            status: "success",
+            message: "Ticket rejected successfully",
+            ticket,
+        });
+    });
+
+    //@desc Close The Ticket
+    //@route Patch /tickets/:id/close
+    //@access Private
+    closeTicket = asyncHandler(async (req, res, next) => {
+        const { id } = req.params
+        const { status } = req.body
+        if (!status) return next(new ApiError("Status is required", 400));
+        if (status !== "closed") return next(new ApiError("Only closed status is allowed", 400));
+        const ticket = await Tickets.findById(id);
+        if (!ticket) return next(new ApiError("Ticket not found", 404));
+        if (ticket.status !== "inProgress") return next(new ApiError(`Ticket is ${ticket.status} You can't close`, 400));
+        ticket.closedBy = req.user._id;
+        ticket.status = "closed";
         await ticket.save();
         res.json({
             status: "success",
-            message: `Ticket status changed to ${ticket.status} successfully`,
+            message: `Ticket closed successfully`,
             ticket
         })
-
     })
 
     //@desc Choose Priority
