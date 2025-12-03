@@ -376,31 +376,9 @@ class TicketsController {
         })
     })
 
-    //@desc Assign Ticket
-    //@route Patch /tickets/:id/assign
+    //@decs Upload Before and After Images
+    //@route Patch /tickets/:id/before-after
     //@access Private
-    assignTicket = asyncHandler(async (req, res, next) => {
-        const { id } = req.params
-        const ticket = await Tickets.findById(id);
-        if (!ticket) return next(new ApiError("Ticket not found", 404));
-        
-        if (!mongoose.Types.ObjectId.isValid(req.body.assignedTo)) {
-            return next(new ApiError("assignedTo must be a valid ObjectId", 400));
-        }
-
-        const user = await User.findById(req.body.assignedTo);
-        if (!user) return next(new ApiError("User not found", 404));
-
-        ticket.assignedTo = req.body.assignedTo;
-        await ticket.save();
-
-        res.json({
-            status: "success",
-            message: `Ticket assigned to ${user.fullName}`,
-            ticket
-        })
-    })
-
     uploadBeforeAfterImages = asyncHandler(async (req, res, next) => {
         console.log("RECEIVED BODY:", JSON.stringify(req.body, null, 2));
         const { id } = req.params;
