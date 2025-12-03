@@ -42,7 +42,7 @@ const ticketSchema = new mongoose.Schema({
         enum: TICKET_PRIORITIES,
         default: "medium"
     },
-    acceptedBy: {
+    assignedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
@@ -117,17 +117,27 @@ ticketSchema.pre(/^find/, async function (next) {
         select: "stadiumName"
     });
     this.populate({
+        path: "rejectedBy",
+        model: "User",
+        select: "firstName lastName email"
+    }),
+    this.populate({
+        path: "closedBy",
+        model: "User",
+        select: "firstName lastName email"
+    })
+    this.populate({
         path: "createdBy",
         model: "User",
         select: "firstName lastName email"
     });
     this.populate({
         path: "assignedTo",
-        model: "User",
-        select: "firstName lastName email"
+        model: "Team",
+        select: "teamName teamType staff"
     });
     this.populate({
-        path: "acceptedBy",
+        path: "assignedBy",
         model: "User",
         select: "firstName lastName email"
     });
