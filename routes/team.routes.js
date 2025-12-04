@@ -27,4 +27,12 @@ router
         TeamController.addTeam
     );
 
+router
+    .route("/:id")
+    .get(
+        protect,
+        allowedTo(ADMIN, SUPER_ADMIN),
+        TeamController.getOneTeam
+    )
+
 module.exports = router;
