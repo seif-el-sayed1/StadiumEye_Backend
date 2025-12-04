@@ -30,11 +30,15 @@ router
         UserController.getMyProfile
     ).patch(
         protect,
-        // allowedTo(USER),
+        allowedTo(USER),
         upload.uploadMedia,
         FirebaseController.uploadMultipleImagesForTheUser("Users"),
         UserValidator.validateUpdateUser,
         UserController.updateMe
+    ).delete(
+        protect,
+        allowedTo(USER),
+        UserController.deactivateMe
     )
     
 router
@@ -44,6 +48,5 @@ router
         allowedTo(ADMIN),
         UserController.getOneUser
     )
-    
 
 module.exports = router;
