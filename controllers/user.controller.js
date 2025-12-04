@@ -71,7 +71,32 @@ class UserController {
         });
     });
 
-    
+    //@desc Deactivate me
+    //@route DELETE /api/v1/users/me
+    //@access Private
+    deactivateMe = asyncHandler(async (req, res, next) => {
+        // Delete User After 15 Days
+        const oldUser = await User.findById(req.user._id);
+        if (!oldUser) return next(new ApiError("User not found", 404));
+        await FirebaseController.deleteOldImage(oldUser.profilePicture, "Users");
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                isActive: false,
+                deactivatedAt: Date.now(),
+                $unset: {
+                    token: 1,
+                    notificationToken: 1
+                }
+            },
+        );
+        res.status(200).json({
+            status: 'success',
+            message: "Your account has been Deleted successfully",
+            user,
+        });
+    });
 }
 
 module.exports = new UserController();
