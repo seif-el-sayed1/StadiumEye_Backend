@@ -10,6 +10,7 @@ class ApiFeatures {
         if (!keyword) return this;
         // search fields for each model
         const searchFields = {
+            User: ["firstName","lastName","email","phone"],
             City: ["nameAr", "nameEn"],
             Country: ["nameAr", "nameEn"],
             Stadium: ["stadiumName"],
