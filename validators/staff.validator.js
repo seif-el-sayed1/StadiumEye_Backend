@@ -28,6 +28,25 @@ class StaffValidator {
         checkIfPhoneStartsWithPlus2(req);
         next();
     });
+
+    validateUpdateStaff = asyncHandler(async (req, res, next) => {
+        const schema = Joi.object({
+            firstName: Joi.string().optional(),
+            lastName: Joi.string().optional(),
+            phone: Joi.string()
+                .custom(phoneNumberValidator)
+                .optional()
+                .messages({
+                    "any.required": "Phone is required",
+                    "string.pattern.base": "Invalid Phone Number"
+            }),
+            email: Joi.string().email().optional(),
+            team: Joi.custom(objectIdValidator).optional(), 
+        });
+        joiErrorHandler(schema, req);
+        checkIfPhoneStartsWithPlus2(req);
+        next();
+    });
 }
 
 
