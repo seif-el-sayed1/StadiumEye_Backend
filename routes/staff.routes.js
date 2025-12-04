@@ -28,11 +28,29 @@ router
         StaffController.getAllStaff
     )
 
+router
+    .route("/:id")
+    .get(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StaffController.getOneStaff
+    )
+    .patch(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StaffValidator.validateUpdateStaff,
+        StaffController.updateStaff
+    ).delete(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StaffController.deactivateStaff
+    )
+
 router  
     .route("/create-password/:token")
     .post(
         GlobalValidator.validateNewPassword,
         StaffController.staffCreatePassword
-    )
+    ) 
 
 module.exports = router
