@@ -104,6 +104,62 @@ class StaffController {
         });
     })
 
+    //@desc Get One 
+    //@route GET /staff/:id
+    //@access Private
+    getOneStaff = asyncHandler(async (req, res, next) => {
+        const staff = await Staff.findById(req.params.id).select("firstName lastName email team");
+        if (!staff) return next(new ApiError("Staff not found", 404));
+        res.status(200).json({
+            status: 'success',
+            staff
+        });
+    })
+
+    //@desc Update Staff 
+    //@route PATCH /staff/:id
+    //@access Private
+    updateStaff = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const staff = await Staff.findByIdAndUpdate(id, req.body, {
+            new: true,
+            runValidators: true
+        });
+        res.status(200).json({
+            status: 'success',
+            data: {
+                staff
+            }
+        });
+    })
+
+    //@desc deactivate Staff
+    //@route DELETE /staff/:id
+    //@access Private
+    deactivateStaff = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const oldStaff = await Staff.findById(id);
+        if (!oldStaff) return next(new ApiError("Staff not found", 404));
+        if (oldStaff.isActive === false) return next(new ApiError("Staff already deactivated", 400));
+        const staff = await Staff.findByIdAndUpdate(
+            id,
+            {
+                isActive: false,
+                deactivatedAt: Date.now(),
+                $unset: {
+                    token: 1,
+                    notificationToken: 1
+                }
+            },
+        );
+        if (!staff) return next(new ApiError("Staff not found", 404));
+        res.status(200).json({
+            status: 'success',
+            data: {
+                staff
+            }
+        });
+    })
 }
 
 module.exports = new StaffController();
