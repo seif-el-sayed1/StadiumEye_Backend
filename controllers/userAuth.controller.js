@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const User = require("../models/user.model");
+const Staff = require("../models/staff.model");
 const ApiError = require("../utils/ApiError");
 const { translate } = require("../utils/translation");
 const { generateCode, hashCode } = require("../utils/generateCode");
@@ -17,6 +18,7 @@ class UserController {
       firstName: user.firstName,
       lastName: user.lastName,
       fullName: user.fullName,
+      role: user.role,
       profilePicture: user.profilePicture,
       email: user.email,
       phone: user.phone,
@@ -37,6 +39,39 @@ class UserController {
     asyncHandler(async (req, res, next) => {
       const { password, email } = req.body;
       const lang = req.headers.lang || "en";
+
+
+      if (user.role === "staff" && !user.isVerified) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+          const staff = await Staff.findOne({ email: user.email }).session(session);
+          if (!staff) {
+            throw new Error("Staff not found");
+          }
+
+          const passwordVerificationToken = await staff.generatePasswordVerificationToken(session);
+
+          await staff.save({ session });
+
+          await EmailController.passwordCreateEmail(passwordVerificationToken, user.email);
+
+          await session.commitTransaction();
+          session.endSession();
+
+          return res.status(200).json({
+            success: true,
+            message: "A verification password mail has been sent to your email address",
+          });
+
+        } catch (err) {
+          await session.abortTransaction();
+          session.endSession();
+          next(err);
+        }
+      }
+
 
       if (loginType && loginType !== user.loginType)
           return next(new ApiError(translate("Incorrect Email/Phone or password", lang), 403));
