@@ -78,6 +78,7 @@ class UserController {
         // Delete User After 15 Days
         const oldUser = await User.findById(req.user._id);
         if (!oldUser) return next(new ApiError("User not found", 404));
+        if (oldUser.isActive) return next(new ApiError("User is already deactivated", 400));
         await FirebaseController.deleteOldImage(oldUser.profilePicture, "Users");
 
         const user = await User.findByIdAndUpdate(
