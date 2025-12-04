@@ -87,6 +87,7 @@ class StaffController {
         const features = new ApiFeatures(Staff.find().select("firstName lastName email team"), req.query, "Team")
             .search()
             .filter()
+            .sort()
             .paginate()
             .cleanResponse();
 
