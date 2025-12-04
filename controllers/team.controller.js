@@ -49,6 +49,18 @@ class TeamController {
             teams
         });
     })
+
+    //@desc Get One Team 
+    //@route GET /teams/:id
+    //@access Private
+    getOneTeam = asyncHandler(async (req, res, next) => {
+        const team = await Team.findById(req.params.id).select("-__v -updatedAt");
+        if (!team) return next(new ApiError("Team not found", 404));
+        res.status(200).json({
+            status: 'success',
+            team
+        });
+    })
 }
 
 module.exports = new TeamController();
