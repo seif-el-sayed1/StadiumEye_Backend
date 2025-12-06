@@ -37,6 +37,7 @@ const ticketSchema = new mongoose.Schema({
     lessonsLearned: String,
     ticketVideos: [String],
     ticketImages: [String],
+    ticketVoices:[String],
     priority: {
         type: String,
         enum: TICKET_PRIORITIES,
@@ -50,7 +51,7 @@ const ticketSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    assignedTo: {
+    assignedTo: {   
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
     },
@@ -108,7 +109,6 @@ const ticketSchema = new mongoose.Schema({
     
 }, { timestamps: true });
 
-// TODO : TICKET VOICE
 
 ticketSchema.pre(/^find/, async function (next) {
     this.populate({
