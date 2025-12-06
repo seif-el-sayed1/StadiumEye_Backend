@@ -36,6 +36,7 @@ class TicketsValidator {
             lessonsLearned: Joi.string().optional(),
             ticketVideos: Joi.array().items(Joi.string().uri()).optional(),
             ticketImages: Joi.array().items(Joi.string().uri()).optional(),
+            ticketVoices: Joi.array().items(Joi.string().uri()).optional(),
             locationLink: Joi.string().required(),
             modelType: Joi.string()
             .valid("safety", "visualPollution")
@@ -101,6 +102,7 @@ class TicketsValidator {
             lessonsLearned: Joi.string().optional(),
             ticketVideos: Joi.array().items(Joi.string().uri()).optional(),
             ticketImages: Joi.array().items(Joi.string().uri()).optional(),
+            ticketVoices: Joi.array().items(Joi.string().uri()).optional(),
             locationLink: Joi.string().optional()
         });
 
