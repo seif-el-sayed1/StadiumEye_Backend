@@ -74,6 +74,16 @@ const uploadVideoAndGetUrl = async (video) => {
     return await getDownloadURL(snapshot.ref);
 };
 
+const uploadVoiceAndGetUrl = async (voice) => {
+    const storageRef = ref(
+        storage,
+        `${folderName}/voice-${uuidv4()}-${Date.now()}-${folderName.toLowerCase()}.mp3`
+    );
+    const metadata = { contentType: "audio/mpeg" };
+    const snapshot = await uploadBytesResumable(storageRef, voice.buffer, metadata);
+    return await getDownloadURL(snapshot.ref);
+};
+
 /**
  * Deletes a video from Firebase Storage using its URL.
  *
@@ -91,6 +101,20 @@ const deleteVideoByUrl = async (fileUrl, folderName) => {
         return true;
     } catch (error) {
         console.log("🚀 ~ deleteVideoByUrl ~ error:", error);
+        return false;
+    }
+};
+
+const deleteVoiceByUrl = async (fileUrl, folderName) => {
+    try {
+        const fullPath = new URL(fileUrl).pathname;
+        const startIndex = fullPath?.indexOf("voice-");
+        const fileName = fullPath.substring(startIndex);
+        const storageRef = ref(storage, `${folderName}/${fileName}`);
+        await deleteObject(storageRef);
+        return true;
+    } catch (error) {
+        console.log("🚀 ~ deleteVoiceByUrl ~ error:", error);
         return false;
     }
 };
@@ -264,6 +288,33 @@ class FirebaseImageController {
         next();
     });
 
+  uploadMultipleVoices = (modelName) =>
+    asyncHandler(async (req, res, next) => {
+        folderName = modelName;
+        const { files } = req;
+        let fieldName;
+
+        if (files && files.length > 0) {
+            let voicesPromise = [];
+
+            await Promise.all(
+                files.map(async (file) => {
+                    if (file.fieldname?.toLowerCase()?.includes("voices")) {
+                        fieldName = file.fieldname;
+                        voicesPromise.push(uploadVoiceAndGetUrl(file));
+                    }
+                })
+            );
+
+            if (voicesPromise.length > 0) {
+                req.body[fieldName] = await Promise.all(voicesPromise);
+            }
+        }
+
+        next();
+    });
+
+
 
     uploadSingleVideo = (modelName, fieldName) =>
         asyncHandler(async (req, res, next) => {
@@ -276,6 +327,8 @@ class FirebaseImageController {
         });
 
     deleteOldVideo = async (video, folderName) => await deleteVideoByUrl(video, folderName);
+
+    deleteOldVoice = async (voice, folderName) => await deleteVoiceByUrl(voice, folderName);
 
   /**
    *
