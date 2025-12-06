@@ -61,21 +61,33 @@ const uploadMediaConfiguration = multer({
     fileFilter: (req, file, cb) => {
         const isImage = file.mimetype.startsWith("image");
         const isVideo = file.mimetype.startsWith("video");
+        const isAudio = file.mimetype.startsWith("audio");
 
-        if (!isImage && !isVideo)
-            return cb(new Error("Only images or videos allowed"), false);
+        if (!isImage && !isVideo && !isAudio)
+            return cb(new Error("Only images, videos or voice allowed"), false);
 
-        req.fileType = isImage ? "image" : "video";
+        req.fileType = isImage 
+            ? "image" 
+            : isVideo 
+                ? "video" 
+                : "voice";
+
         cb(null, true);
     },
     limits: {
         fileSize: (req, file) => {
-            return file.mimetype.startsWith("image")
-                ? 10 * 1024 * 1024       // 10MB
-                : 50 * 1024 * 1024;      // 50MB
+            if (file.mimetype.startsWith("image"))
+                return 10 * 1024 * 1024; // 10MB
+
+            if (file.mimetype.startsWith("video"))
+                return 50 * 1024 * 1024; // 50MB
+
+            if (file.mimetype.startsWith("audio"))
+                return 20 * 1024 * 1024; // 20MB
         }
     }
 });
+
 
 
 const uploadAnyImages = imageConfiguration.any([
@@ -93,7 +105,8 @@ const uploadMedia = uploadMediaConfiguration.any([
   { name: "stadiumImages", maxCount: 10 },
   { name: "stadiumVideos", maxCount: 10 },
   { name: "ticketImages", maxCount: 10 },
-  { name: "ticketVideos", maxCount: 10 }
+  { name: "ticketVideos", maxCount: 10 },
+  { name: "ticketVoices", maxCount: 10 }
 ]);
 
 
