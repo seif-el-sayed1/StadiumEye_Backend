@@ -194,7 +194,7 @@ class TicketsController {
             return next(new ApiError(`Ticket Not Found`, 404));
         }
 
-        if (ticket.status !== "open") {
+        if (oldTicket.status !== "open") {
             return next(new ApiError(`Ticket is ${ticket.status} You can't delete`, 400));
         }
         
@@ -214,6 +214,14 @@ class TicketsController {
                 await FirebaseController.deleteOldImage(image, "ticketImages");
             }
         }
+        if (req.body.ticketVoices) {
+            const oldAudios = oldTicket.ticketVoices || [];
+            const newAudios = req.body.ticketVoices || [];
+            const audiosToDelete = oldAudios.filter(oldAud => !newAudios.includes(oldAud));
+            for (const audio of audiosToDelete) {
+                await FirebaseController.deleteOldVoice(audio, "ticketVoices");
+            }
+        }
 
         const ticket = await Tickets.findByIdAndUpdate(id, req.body, {
             new: true,
@@ -231,34 +239,67 @@ class TicketsController {
     //@route DELETE /tickets/:id
     //@access Public
     deleteTicket = asyncHandler(async (req, res, next) => {
-        const { id } = req.params;
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        const ticket = await Tickets.findByIdAndDelete(id);
-        if (!ticket) {
-            return next(new ApiError(`Ticket Not Found`, 404));
-        }
+        try {
+            const { id } = req.params;
 
-        if (ticket.status !== "open") {
-            return next(new ApiError(`Ticket is ${ticket.status} You can't delete`, 400));
-        }
-
-        if (ticket.ticketImages && ticket.ticketImages.length > 0) {
-            for (const img of ticket.ticketImages) {
-                await FirebaseController.deleteOldImage(img, "ticketsImages");
+            const ticket = await Tickets.findByIdAndDelete(id, { session });
+            if (!ticket) {
+                await session.abortTransaction();
+                session.endSession();
+                return next(new ApiError(`Ticket Not Found`, 404));
             }
-        }
 
-        if (ticket.ticketVideos && ticket.ticketVideos.length > 0) {
-            for (const vid of ticket.ticketVideos) {
-                await FirebaseController.deleteOldVideo(vid, "ticketVideos");
+            const stadium = await Stadium.findById(ticket.stadium).session(session);
+            if (!stadium) {
+                await session.abortTransaction();
+                session.endSession();
+                return next(new ApiError(`Stadium Not Found`, 404));
             }
-        }
 
-        res.status(200).json({
-            status: "success",
-            message: "Ticket deleted successfully",
-            ticket
-        });
+            if (ticket.status !== "open") {
+                await session.abortTransaction();
+                session.endSession();
+                return next(new ApiError(`Ticket is ${ticket.status}, You can't delete`, 400));
+            }
+
+            stadium.tickets.pull(ticket._id);
+            await stadium.save({ session });
+
+            if (ticket.ticketImages?.length) {
+                for (const img of ticket.ticketImages) {
+                    await FirebaseController.deleteOldImage(img, "ticketsImages");
+                }
+            }
+
+            if (ticket.ticketVideos?.length) {
+                for (const vid of ticket.ticketVideos) {
+                    await FirebaseController.deleteOldVoice(vid, "ticketVideos");
+                }
+            }
+
+            if (ticket.ticketVoices?.length) {
+                for (const aud of ticket.ticketVoices) {
+                    await FirebaseController.deleteOldVoice(aud, "ticketVoices");
+                }
+            }
+
+            await session.commitTransaction();
+            session.endSession();
+
+            res.status(200).json({
+                status: "success",
+                message: "Ticket deleted successfully",
+                ticket
+            });
+
+        } catch (err) {
+            await session.abortTransaction();
+            session.endSession();
+            return next(err);
+        }
     });
 
     //@desc assign or reject ticket
