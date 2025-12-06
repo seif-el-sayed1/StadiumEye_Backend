@@ -25,6 +25,7 @@ router
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
         FirebaseController.uploadMultipleVideos("ticketVideos"),
+        FirebaseController.uploadMultipleVoices("ticketVoices"),
         TicketsValidator.addTicketValidator,
         TicketsController.addTicket
     ).get(
@@ -54,6 +55,7 @@ router
         upload.uploadMedia,
         FirebaseController.uploadMultipleImages("ticketImages"),
         FirebaseController.uploadMultipleVideos("ticketVideos"),
+        FirebaseController.uploadMultipleVoices("ticketVoices"),
         TicketsValidator.updateTicketValidator,
         TicketsController.updateTicket
     ).delete(
