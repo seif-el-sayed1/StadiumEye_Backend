@@ -1,8 +1,11 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
 const User = require("../models/user.model");
 const FirebaseController = require("./firebase.controller");
+const Tickets = require("../models/ticket.model");
+const Teams = require("../models/teams.model");
 
 class UserController {
     //@desc Get All Users
@@ -42,14 +45,25 @@ class UserController {
     //@route GET /api/v1/users/me
     //@access Private
     getMyProfile = asyncHandler(async (req, res, next) => {
-        const user = await User.findById(req.user._id).select("firstName lastName email profilePicture createdAt role phone");
+        const [activeUsers, allTeams, tickets, user] = await Promise.all([
+            User.countDocuments({ isActive: true }),
+            Teams.countDocuments(),
+            Tickets.countDocuments({ createdBy: req.user._id }),
+            User.findById(req.user._id)
+                .select("firstName lastName email profilePicture createdAt role phone")
+        ]);
+
         if (!user) return next(new ApiError("User not found", 404));
+
         res.status(200).json({
-            status: 'success',
+            status: "success",
+            totalActiveUsers: activeUsers,
+            totalTeams: allTeams,
+            totalTickets: tickets,
             user,
         });
     });
-
+    
     //@desc Update me
     //@route PUT /api/v1/users/:id
     //@access Private
