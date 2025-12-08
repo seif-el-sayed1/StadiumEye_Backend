@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
-const mongoose = require("mongoose");
+const Joi = require("joi");
+
 const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
 const Team = require("../models/teams.model");
@@ -61,6 +62,42 @@ class TeamController {
             team
         });
     })
+
+    //@desc Update One Team 
+    //@route PATCH /teams/:id
+    //@access Private
+    updateTeam = asyncHandler(async (req, res, next) => {
+
+        const schema = Joi.object({
+            teamName: Joi.string().trim().optional(),
+            teamType: Joi.string().trim().valid("reports", "maintenance").optional(),
+        }).options({
+            allowUnknown: false,  
+            abortEarly: false
+        });
+
+        const { error, value } = schema.validate(req.body);
+
+        if (error) {
+            return next(new ApiError(
+                error.details.map((err) => err.message).join(", "),
+                400
+            ));
+        }
+
+        const team = await Team.findByIdAndUpdate(req.params.id, value, {
+            new: true,
+            runValidators: true
+        });
+
+        if (!team) return next(new ApiError("Team not found", 404));
+
+        res.status(200).json({
+            status: 'success',
+            message: "Team updated successfully",
+            data: { team }
+        });
+    }); 
 }
 
 module.exports = new TeamController();
