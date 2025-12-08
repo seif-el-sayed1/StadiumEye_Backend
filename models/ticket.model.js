@@ -68,26 +68,6 @@ const ticketSchema = new mongoose.Schema({
         before: [String],
         after: [String],
     },
-    locationLink: {
-        type: String,
-        required: true
-    },
-    location: {
-        name: String,
-        lat: Number,
-        lng: Number,
-        //GeoJSON
-        type: {
-            type: String,
-            default: "Point",
-            enum: ["Point"]
-        },
-        address: String,
-        coordinates: {
-            type: [Number], // [lng, lat]
-            default: [0, 0]
-        },
-    },
     ticketDetections: [
         {
             url: String,       
