@@ -33,6 +33,10 @@ router
         protect,
         allowedTo(ADMIN, SUPER_ADMIN),
         TeamController.getOneTeam
+    ).patch(
+        protect,
+        allowedTo(ADMIN, SUPER_ADMIN),
+        TeamController.updateTeam
     )
 
 module.exports = router;
