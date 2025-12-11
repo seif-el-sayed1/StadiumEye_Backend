@@ -30,6 +30,22 @@ router
     .get(StadiumController.getAllStadiums)
 
 router
+    .route("/stats")
+    .get(
+        protect,
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StadiumController.getDashboardStats
+    );
+
+router
+    .route("/reports")
+    .post(
+        protect,
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StadiumController.exportReport
+    )
+
+router
     .route("/:id")
     .get(StadiumController.getSingleStadium)
     .patch(
