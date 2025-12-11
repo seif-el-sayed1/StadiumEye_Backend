@@ -1,7 +1,10 @@
 const asyncHandler = require("express-async-handler");
 const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
+const { generatePDFReport, generateExcelReport } = require("../utils/generateReports");
 const Stadium = require("../models/stadium.model");
+const User = require("../models/user.model");
+const Ticket = require("../models/ticket.model");
 const FirebaseController = require("./firebase.controller");
 const mongoose = require("mongoose");
 
@@ -131,8 +134,119 @@ class StadiumController {
         });
     });
 
+    //@desc  Dashboard stats
+    //@route GET /stadiums/stats
+    //@access Private
+    getDashboardStats = asyncHandler(async (req, res) => {
+        const rawStatusStats = await Ticket.aggregate([
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]);
 
+        const TICKET_STATUS = ["open","inProgress","resolved","closed","rejected"];
 
+        const ticketStatusStats = {};
+        TICKET_STATUS.forEach(status => {
+            ticketStatusStats[`${status}Tickets`] =
+                rawStatusStats.find(s => s._id === status)?.count || 0;
+        });
+
+        const rawTicketsPerMonth = await Ticket.aggregate([
+            {
+                $group: {
+                    _id: { month: { $month: "$createdAt" } },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const monthsNames = [
+            "January","February","March","April","May","June",
+            "July","August","September","October","November","December"
+        ];
+
+        const ticketsPerMonth = {};
+        for (let i = 1; i <= 12; i++) {
+            const found = rawTicketsPerMonth.find(m => m._id.month === i);
+            ticketsPerMonth[monthsNames[i - 1]] = found ? found.count : 0;
+        }
+
+        const rawStadiumStats = await Stadium.aggregate([
+            {
+                $lookup: {
+                    from: "tickets",
+                    localField: "_id",
+                    foreignField: "stadium",
+                    as: "tickets"
+                }
+            },
+            {
+                $project: {
+                    stadiumName: 1,
+                    ticketsCount: { $size: "$tickets" }
+                }
+            }
+        ]);
+
+        const stadiumTicketStats = rawStadiumStats.map(item => ({
+            stadiumName: item.stadiumName,
+            ticketsCount: item.ticketsCount
+        }));
+
+        const activeUsers = await User.countDocuments({
+            role: "user",
+            isActive: true
+        });
+
+        const activeStaff = await User.countDocuments({
+            role: "staff",
+            isActive: true
+        });
+
+        res.status(200).json({
+            status: "success",
+            data: {
+                ticketStatusStats,
+                ticketsPerMonth,
+                stadiumTicketStats,
+                activeUsers,
+                activeStaff
+            }
+        });
+    });
+
+    //@desc  Export Reports
+    //@route GET /stadiums/reports
+    //@access Private
+    exportReport = asyncHandler(async (req, res) => {
+        const {
+            stadiums,        
+            dateRange = "all", 
+            includeMedia = false,
+            format = "pdf"     
+        } = req.body;
+
+        const filters = {
+            stadiums: stadiums === "all" || !stadiums ? [] : stadiums,
+            dateRange,
+            includeMedia: includeMedia === true || includeMedia === "true"
+        };
+
+        let buffer, filename, contentType;
+
+        if (format === "excel") {
+            buffer = await generateExcelReport(filters);
+            filename = `StadiumEye_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+            contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        } else {
+            buffer = await generatePDFReport(filters);
+            filename = `StadiumEye_Report_${new Date().toISOString().slice(0,10)}.pdf`;
+            contentType = "application/pdf";
+        }
+
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        res.setHeader("Content-Type", contentType);
+        res.send(buffer);
+    });
 }
 
 module.exports = new StadiumController();
