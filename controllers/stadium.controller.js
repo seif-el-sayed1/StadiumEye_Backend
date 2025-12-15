@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
-const path = require("path")
+const fs = require("fs");
+const path = require("path");
 const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
 const { generatePDFReport, generateExcelReport } = require("../utils/generateReports");
@@ -8,6 +9,13 @@ const User = require("../models/user.model");
 const Ticket = require("../models/ticket.model");
 const FirebaseController = require("./firebase.controller");
 const mongoose = require("mongoose");
+
+const deleteLocalFile = (filePath) => {
+    const fullPath = path.join(__dirname, "..", filePath);
+    if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+    }
+};
 
 class StadiumController {
     // @desc  Add Stadium
@@ -93,23 +101,32 @@ class StadiumController {
         if (!oldStadium) {
             return next(new ApiError(`No stadium found for this id ${id}`, 404));
         }
-        
+
+        if (req.body.stadiumImages) {
+            const oldImages = oldStadium.stadiumImages || [];
+            const newImages = req.body.stadiumImages || [];
+            const imagesToDelete = oldImages.filter(img => !newImages.includes(img));
+            for (const image of imagesToDelete) deleteLocalFile(image);
+        }
 
         if (req.body.stadiumVideos) {
             const oldVideos = oldStadium.stadiumVideos || [];
             const newVideos = req.body.stadiumVideos || [];
-            const videosToDelete = oldVideos.filter(oldVid => !newVideos.includes(oldVid));
-            for (const video of videosToDelete) {
-                await FirebaseController.deleteOldVideo(video, "StadiumVideos");
-            }
+            const videosToDelete = oldVideos.filter(vid => !newVideos.includes(vid));
+            for (const video of videosToDelete) deleteLocalFile(video);
         }
-        if (req.body.stadiumImages) {
-            const oldImages = oldStadium.stadiumImages || [];
-            const newImages = req.body.stadiumImages || [];
-            const imagesToDelete = oldImages.filter(oldImg => !newImages.includes(oldImg));
-            for (const image of imagesToDelete) {
-                await FirebaseController.deleteOldImage(image, "StadiumImages");
-            }
+
+        if (req.files && req.files.length > 0) {
+            req.files.forEach((file) => {
+                if (file.mimetype.startsWith("image")) {
+                    req.body.stadiumImages = req.body.stadiumImages || [];
+                    req.body.stadiumImages.push(`/uploads/images/${file.filename}`);
+                }
+                if (file.mimetype.startsWith("video")) {
+                    req.body.stadiumVideos = req.body.stadiumVideos || [];
+                    req.body.stadiumVideos.push(`/uploads/videos/${file.filename}`);
+                }
+            });
         }
 
         const stadium = await Stadium.findByIdAndUpdate(id, req.body, {
@@ -137,13 +154,13 @@ class StadiumController {
 
         if (stadium.stadiumImages && stadium.stadiumImages.length > 0) {
             for (const img of stadium.stadiumImages) {
-                await FirebaseController.deleteOldImage(img, "StadiumImages");
+                deleteLocalFile(img);
             }
         }
 
         if (stadium.stadiumVideos && stadium.stadiumVideos.length > 0) {
             for (const vid of stadium.stadiumVideos) {
-                await FirebaseController.deleteOldVideo(vid, "StadiumVideos");
+                deleteLocalFile(vid);
             }
         }
 
