@@ -26,20 +26,20 @@ class StadiumValidator {
         const schema = Joi.object({
             stadiumName: Joi.string().required(),
             city: Joi.string().custom(objectIdValidator).required(),
-            stadiumImages: Joi.array().items(Joi.string().uri()).optional(),
+            stadiumImages: Joi.array().items(Joi.string()).optional(),
             capacity: Joi.number().positive().required(),
             positives: Joi.array().items(Joi.string()).required(),
             negatives: Joi.array().items(Joi.string()).required(),
             tickets: Joi.array()
                 .items(Joi.string().custom(objectIdValidator))
                 .optional(),
-            stadiumVideos: Joi.array().items(Joi.string().uri()).optional(),
+            stadiumVideos: Joi.array().items(Joi.string()).optional(),
             services: Joi.array()
                 .items(Joi.string().valid(...SERVICES_LIST))
                 .required(),
             locationLink: Joi.string().required()
         });
-
+        
         joiErrorHandler(schema, req);
 
         req.body.location = {
