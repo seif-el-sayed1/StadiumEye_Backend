@@ -16,18 +16,16 @@ const FirebaseController = require("../controllers/firebase.controller");
 const router = express.Router();
 
 // Stadium Routes
-router
-    .route("/")
-    .post(
-        protect, 
-        allowedTo(ADMIN, SUPER_ADMIN),
-        upload.uploadMedia,
-        FirebaseController.uploadMultipleImages("StadiumImages"),
-        FirebaseController.uploadMultipleVideos("StadiumVideos"),
-        StadiumValidator.addStadiumValidator,
-        StadiumController.addStadium
+router.route("/")
+.post(
+    protect,
+    allowedTo(ADMIN, SUPER_ADMIN),
+    upload.uploadMedia,
+    StadiumValidator.addStadiumValidator,
+    StadiumController.addStadium
+    ).get(
+        StadiumController.getAllStadiums
     )
-    .get(StadiumController.getAllStadiums)
 
 router
     .route("/stats")
