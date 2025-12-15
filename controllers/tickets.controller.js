@@ -18,29 +18,65 @@ class TicketsController {
     //@access Public
     addTicket = asyncHandler(async (req, res, next) => {
         try {
-            const ticket = await Tickets.create(req.body); 
+            const ticketImages = [];
+            const ticketVideos = [];
+            const ticketVoices = [];
+
+            if (req.files && req.files.length > 0) {
+                req.files.forEach((file) => {
+
+                    if (file.mimetype.startsWith("image")) {
+                        ticketImages.push(`/uploads/images/${file.filename}`);
+                    }
+
+                    if (file.mimetype.startsWith("video")) {
+                        ticketVideos.push(`/uploads/videos/${file.filename}`);
+                    }
+
+                    if (file.mimetype.startsWith("audio")) {
+                        ticketVoices.push(`/uploads/voices/${file.filename}`);
+                    }
+
+                });
+            }
+
+            req.body.ticketImages = ticketImages;
+            req.body.ticketVideos = ticketVideos;
+            req.body.ticketVoices = ticketVoices;
+
+            const ticket = await Tickets.create(req.body);
 
             await ticket.populate([
-                { path: 'stadium', select: 'stadiumName' },
-                { path: 'createdBy', select: 'firstName lastName email' }
+                { path: "stadium", select: "stadiumName" },
+                { path: "createdBy", select: "firstName lastName email" }
             ]);
 
             const stadium = await Stadium.findById(ticket.stadium);
-
             stadium.tickets.push(ticket._id);
             await stadium.save();
 
             const admins = await Admin.find().select("email");
+
             for (const admin of admins) {
                 await EmailController.reportEmailToAdmin(admin.email, ticket);
             }
-            await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
+
+            await EmailController.reportEmailToUser(
+                ticket.createdBy.email,
+                ticket
+            );
 
             const modelType = req.body.modelType || "safety";
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-            if (req.body.ticketImages && req.body.ticketImages.length > 0) {
-                for (const imgUrl of req.body.ticketImages) {
-                    const rawDetections = await processDetections(imgUrl, modelType, "image");
+            if (ticketImages.length > 0) {
+                for (const imgUrl of ticketImages) {
+                    const fullImgUrl = `${baseUrl}${imgUrl}`; // Full URL for AI
+                    const rawDetections = await processDetections(
+                        fullImgUrl,
+                        modelType,
+                        "image"
+                    );
 
                     const detections = Array.isArray(rawDetections)
                         ? rawDetections
@@ -61,9 +97,14 @@ class TicketsController {
                 }
             }
 
-            if (req.body.ticketVideos && req.body.ticketVideos.length > 0) {
-                for (const vidUrl of req.body.ticketVideos) {
-                    const rawDetections = await processDetections(vidUrl, modelType, "video");
+            if (ticketVideos.length > 0) {
+                for (const vidUrl of ticketVideos) {
+                    const fullVidUrl = `${baseUrl}${vidUrl}`; // Full URL for AI
+                    const rawDetections = await processDetections(
+                        fullVidUrl,
+                        modelType,
+                        "video"
+                    );
 
                     const detections = Array.isArray(rawDetections)
                         ? rawDetections
@@ -85,7 +126,11 @@ class TicketsController {
             }
 
             const populatedTicket = await Tickets.findById(ticket._id);
-            res.status(201).json({ status: "success", data: populatedTicket });
+
+            res.status(201).json({
+                status: "success",
+                data: populatedTicket
+            });
 
         } catch (error) {
             next(error);
