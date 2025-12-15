@@ -50,8 +50,6 @@ router
         protect,
         allowedTo(ADMIN, SUPER_ADMIN),
         upload.uploadMedia,
-        FirebaseController.uploadMultipleImages("StadiumImages"),
-        FirebaseController.uploadMultipleVideos("StadiumVideos"),
         StadiumValidator.updateStadiumValidator,
         StadiumController.updateStadium
     )
