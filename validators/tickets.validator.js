@@ -7,7 +7,7 @@ const ApiError = require("../utils/ApiError");
 const asyncHandler = require("express-async-handler");
 
 class TicketsValidator {
-    addTicketValidator(req, res, next)  {
+    addTicketValidator(req, res, next) {
 
         const schema = Joi.object({
             createdBy: Joi.custom(objectIdValidator).required(),
@@ -17,19 +17,23 @@ class TicketsValidator {
             observations: Joi.string().required(),
             challenges: Joi.string().optional(),
             lessonsLearned: Joi.string().optional(),
-            ticketVideos: Joi.array().items(Joi.string().uri()).optional(),
-            ticketImages: Joi.array().items(Joi.string().uri()).optional(),
-            ticketVoices: Joi.array().items(Joi.string().uri()).optional(),
+
+            ticketVideos: Joi.array().items(Joi.string()).optional(),
+            ticketImages: Joi.array().items(Joi.string()).optional(),
+            ticketVoices: Joi.array().items(Joi.string()).optional(),
+
             modelType: Joi.string()
-            .valid("safety", "visualPollution")
-            .when("ticketImages", {
-                is: Joi.array().min(1),
-                then: Joi.required(),
-            })
-            .when("ticketVideos", {
-                is: Joi.array().min(1),
-                then: Joi.required(),
-            }),        })
+                .valid("safety", "visualPollution")
+                .when("ticketImages", {
+                    is: Joi.array().min(1),
+                    then: Joi.required(),
+                })
+                .when("ticketVideos", {
+                    is: Joi.array().min(1),
+                    then: Joi.required(),
+                }),
+        });
+
         req.body.createdBy = req.user._id;
 
         joiErrorHandler(schema, req);
