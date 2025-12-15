@@ -17,7 +17,11 @@ module.exports = (app) => {
   app.use(bodyParser.urlencoded({ extended: true }));
   // Use multer for handling form-data
   app.use(express.json({ limit: "25kb" }));
-  app.use(express.static(path.join(__dirname, "uploads")));
+  
+  app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "uploads"))
+  );
 
   app.use((req, res, next) => {
     if (
