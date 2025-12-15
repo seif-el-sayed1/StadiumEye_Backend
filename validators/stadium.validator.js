@@ -56,8 +56,8 @@ class StadiumValidator {
 
     updateStadiumValidator(req, res, next) {
         let { locationLink } = req.body;
-
         let latLong = null;
+
         if (locationLink) {
             latLong = extractLatLong(locationLink);
             if (!latLong) {
@@ -94,8 +94,29 @@ class StadiumValidator {
                 lng: latLong.long,
                 type: "Point",
                 address: locationLink.trim(),
-                coordinates: [latLong.long, latLong.lat] 
+                coordinates: [latLong.long, latLong.lat]
             };
+        }
+
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(file => {
+                if (file.mimetype.startsWith("image")) {
+                    req.body.stadiumImages = req.body.stadiumImages || [];
+                    req.body.stadiumImages.push(`/uploads/images/${file.filename}`);
+                }
+                if (file.mimetype.startsWith("video")) {
+                    req.body.stadiumVideos = req.body.stadiumVideos || [];
+                    req.body.stadiumVideos.push(`/uploads/videos/${file.filename}`);
+                }
+            });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        if (req.body.stadiumImages) {
+            req.body.stadiumImagesFull = req.body.stadiumImages.map(img => `${baseUrl}${img}`);
+        }
+        if (req.body.stadiumVideos) {
+            req.body.stadiumVideosFull = req.body.stadiumVideos.map(vid => `${baseUrl}${vid}`);
         }
 
         next();
