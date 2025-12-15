@@ -1,4 +1,5 @@
 const asyncHandler = require("express-async-handler");
+const path = require("path")
 const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
 const { generatePDFReport, generateExcelReport } = require("../utils/generateReports");
@@ -13,13 +14,32 @@ class StadiumController {
     // @route POST /stadiums
     // @access Private/Admin
     addStadium = asyncHandler(async (req, res, next) => {
+        const stadiumImages = [];
+        const stadiumVideos = [];
+
+        if (req.files && req.files.length > 0) {
+            req.files.forEach((file) => {
+                if (file.mimetype.startsWith("image")) {
+                    stadiumImages.push(`/uploads/images/${file.filename}`);
+                }
+
+                if (file.mimetype.startsWith("video")) {
+                    stadiumVideos.push(`/uploads/videos/${file.filename}`);
+                }
+            });
+        }
+
+        req.body.stadiumImages = stadiumImages;
+        req.body.stadiumVideos = stadiumVideos;
+
         const stadium = await Stadium.create(req.body);
+
         res.status(201).json({
             status: "success",
             message: "Stadium added successfully",
             stadium
         });
-    })
+    });
     
     //@desc  Get All Stadiums
     //@route GET /stadiums
