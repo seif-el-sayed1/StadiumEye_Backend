@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose")
 const ApiError = require('../utils/ApiError');
@@ -11,6 +13,18 @@ const FirebaseController = require("./firebase.controller");
 const EmailController = require("./email.controller");
 const  processDetections  = require("../utils/processDetections");
 
+const deleteLocalFile = (filePath) => {
+    const fullPath = path.join(__dirname, "..", filePath);
+    if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+};
+
+const deleteFiles = (files, folderName) => {
+    if (!files?.length) return;
+    for (const file of files) {
+        const fileName = path.basename(file);
+        deleteLocalFile(`/uploads/${folderName}/${fileName}`);
+    }
+};
 class TicketsController { 
 
     //@decs  Add Ticket
@@ -240,32 +254,28 @@ class TicketsController {
         }
 
         if (oldTicket.status !== "open") {
-            return next(new ApiError(`Ticket is ${ticket.status} You can't delete`, 400));
+            return next(new ApiError(`Ticket is ${oldTicket.status}. You can't update it`, 400));
         }
-        
+
         if (req.body.ticketVideos) {
             const oldVideos = oldTicket.ticketVideos || [];
             const newVideos = req.body.ticketVideos || [];
             const videosToDelete = oldVideos.filter(oldVid => !newVideos.includes(oldVid));
-            for (const video of videosToDelete) {
-                await FirebaseController.deleteOldVideo(video, "ticketVideos");
-            }
+            deleteFiles(videosToDelete, "videos");
         }
+
         if (req.body.ticketImages) {
             const oldImages = oldTicket.ticketImages || [];
             const newImages = req.body.ticketImages || [];
             const imagesToDelete = oldImages.filter(oldImg => !newImages.includes(oldImg));
-            for (const image of imagesToDelete) {
-                await FirebaseController.deleteOldImage(image, "ticketImages");
-            }
+            deleteFiles(imagesToDelete, "images");
         }
+
         if (req.body.ticketVoices) {
             const oldAudios = oldTicket.ticketVoices || [];
             const newAudios = req.body.ticketVoices || [];
             const audiosToDelete = oldAudios.filter(oldAud => !newAudios.includes(oldAud));
-            for (const audio of audiosToDelete) {
-                await FirebaseController.deleteOldVoice(audio, "ticketVoices");
-            }
+            deleteFiles(audiosToDelete, "audios"); 
         }
 
         const ticket = await Tickets.findByIdAndUpdate(id, req.body, {
@@ -275,7 +285,7 @@ class TicketsController {
 
         res.status(200).json({
             status: "success",
-            message: "Tickets updated successfully",
+            message: "Ticket updated successfully",
             ticket
         });
     });
@@ -313,23 +323,9 @@ class TicketsController {
             stadium.tickets.pull(ticket._id);
             await stadium.save({ session });
 
-            if (ticket.ticketImages?.length) {
-                for (const img of ticket.ticketImages) {
-                    await FirebaseController.deleteOldImage(img, "ticketsImages");
-                }
-            }
-
-            if (ticket.ticketVideos?.length) {
-                for (const vid of ticket.ticketVideos) {
-                    await FirebaseController.deleteOldVoice(vid, "ticketVideos");
-                }
-            }
-
-            if (ticket.ticketVoices?.length) {
-                for (const aud of ticket.ticketVoices) {
-                    await FirebaseController.deleteOldVoice(aud, "ticketVoices");
-                }
-            }
+            deleteFiles(ticket.ticketImages, "images");
+            deleteFiles(ticket.ticketVideos, "videos");
+            deleteFiles(ticket.ticketVoices, "audios");
 
             await session.commitTransaction();
             session.endSession();
