@@ -50,9 +50,6 @@ router
         allowedTo(USER),
         TicketsValidator.checkIfTicketIsOpen,
         upload.uploadMedia,
-        FirebaseController.uploadMultipleImages("ticketImages"),
-        FirebaseController.uploadMultipleVideos("ticketVideos"),
-        FirebaseController.uploadMultipleVoices("ticketVoices"),
         TicketsValidator.updateTicketValidator,
         TicketsController.updateTicket
     ).delete(
