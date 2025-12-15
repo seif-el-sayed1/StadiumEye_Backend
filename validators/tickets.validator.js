@@ -71,8 +71,37 @@ class TicketsValidator {
 
         joiErrorHandler(schema, req);
 
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(file => {
+                if (file.mimetype.startsWith("image")) {
+                    req.body.ticketImages = req.body.ticketImages || [];
+                    req.body.ticketImages.push(`/uploads/images/${file.filename}`);
+                }
+                if (file.mimetype.startsWith("video")) {
+                    req.body.ticketVideos = req.body.ticketVideos || [];
+                    req.body.ticketVideos.push(`/uploads/videos/${file.filename}`);
+                }
+                if (file.mimetype.startsWith("audio")) {
+                    req.body.ticketVoices = req.body.ticketVoices || [];
+                    req.body.ticketVoices.push(`/uploads/voices/${file.filename}`);
+                }
+            });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        if (req.body.ticketImages) {
+            req.body.ticketImagesFull = req.body.ticketImages.map(img => `${baseUrl}${img}`);
+        }
+        if (req.body.ticketVideos) {
+            req.body.ticketVideosFull = req.body.ticketVideos.map(vid => `${baseUrl}${vid}`);
+        }
+        if (req.body.ticketVoices) {
+            req.body.ticketVoicesFull = req.body.ticketVoices.map(audio => `${baseUrl}${audio}`);
+        }
+
         next();
     }
+
 
 }
 
