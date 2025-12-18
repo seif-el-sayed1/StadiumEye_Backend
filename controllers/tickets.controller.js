@@ -9,7 +9,6 @@ const User = require("../models/user.model");
 const Team = require("../models/teams.model");
 const Admin = require("../models/admin.model");
 const Stadium = require("../models/stadium.model");
-const FirebaseController = require("./firebase.controller");
 const EmailController = require("./email.controller");
 const  processDetections  = require("../utils/processDetections");
 
@@ -64,10 +63,6 @@ class TicketsController {
                 { path: "stadium", select: "stadiumName" },
                 { path: "createdBy", select: "firstName lastName email" }
             ]);
-
-            const stadium = await Stadium.findById(ticket.stadium);
-            stadium.tickets.push(ticket._id);
-            await stadium.save();
 
             const admins = await Admin.find().select("email");
 
