@@ -7,8 +7,6 @@ const { generatePDFReport, generateExcelReport } = require("../utils/generateRep
 const Stadium = require("../models/stadium.model");
 const User = require("../models/user.model");
 const Ticket = require("../models/ticket.model");
-const FirebaseController = require("./firebase.controller");
-const mongoose = require("mongoose");
 
 const deleteLocalFile = (filePath) => {
     const fullPath = path.join(__dirname, "..", filePath);
@@ -53,7 +51,12 @@ class StadiumController {
     //@route GET /stadiums
     //@access Public
     getAllStadiums = asyncHandler(async (req, res, next) => {
-        const features = new ApiFeatures(Stadium.find().populate("tickets", "area observations"), req.query, "Stadium")
+        const features = new ApiFeatures(
+            Stadium.find()
+                .populate("city"), 
+            req.query,
+            "Stadium"
+        )
         .search()
         .filter()
         .paginate()
@@ -79,7 +82,7 @@ class StadiumController {
         const { id } = req.params;
 
         const stadium = await Stadium.findById(id).select("-__v -createdAt -updatedAt")
-            .populate("tickets", "area observations");
+            .populate("city", "nameEn nameAr");
 
         if (!stadium) {
             return next(new ApiError(`No stadium found for this id ${id}`, 404));
@@ -92,7 +95,7 @@ class StadiumController {
     });
 
     // @desc  Update Stadium
-    // @route PUT /stadiums/:id
+    // @route Patch /stadiums/:id
     // @access Private/Admin
     updateStadium = asyncHandler(async (req, res, next) => {
         const { id } = req.params;
@@ -106,17 +109,21 @@ class StadiumController {
             const oldImages = oldStadium.stadiumImages || [];
             const newImages = req.body.stadiumImages || [];
             const imagesToDelete = oldImages.filter(img => !newImages.includes(img));
-            for (const image of imagesToDelete) deleteLocalFile(image);
+            for (const image of imagesToDelete) {
+                deleteLocalFile(image);
+            }
         }
 
         if (req.body.stadiumVideos) {
             const oldVideos = oldStadium.stadiumVideos || [];
             const newVideos = req.body.stadiumVideos || [];
             const videosToDelete = oldVideos.filter(vid => !newVideos.includes(vid));
-            for (const video of videosToDelete) deleteLocalFile(video);
+            for (const video of videosToDelete) {
+                deleteLocalFile(video);
+            }
         }
 
-        if (req.files && req.files.length > 0) {
+        if (req.files?.length) {
             req.files.forEach((file) => {
                 if (file.mimetype.startsWith("image")) {
                     req.body.stadiumImages = req.body.stadiumImages || [];
@@ -129,14 +136,59 @@ class StadiumController {
             });
         }
 
-        const stadium = await Stadium.findByIdAndUpdate(id, req.body, {
-            new: true,
-            runValidators: true
-        });
+        if (req.body.isActive !== undefined) {
+            req.body.isActive = req.body.isActive === "true";
+        }
+
+        const stadium = await Stadium.findByIdAndUpdate(
+            id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        if (typeof req.body.isActive === "boolean") {
+            await Ticket.updateMany(
+                { stadium: stadium._id },
+                {
+                    $set: {
+                        stadiumStatus: req.body.isActive ? "active" : "inActive"
+                    }
+                }
+            );
+        }
 
         res.status(200).json({
             status: "success",
             message: "Stadium updated successfully",
+            stadium
+        });
+    });
+
+
+    // @desc Update activation status
+    // @route PUT /stadiums/:id/activate
+    // @access Private/Admin
+    updateActivationStatus = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+
+        const stadium = await Stadium.findById(id);
+        if (!stadium) {
+            return next(new ApiError(`No stadium found for this id ${id}`, 404));
+        }
+
+        stadium.isActive = !stadium.isActive;
+        await stadium.save();
+
+        const ticketStadiumStatus = stadium.isActive ? "active" : "inActive";
+
+        await Ticket.updateMany(
+            { stadium: stadium._id },
+            { $set: { stadiumStatus: ticketStadiumStatus } }
+        );
+
+        res.status(200).json({
+            status: "success",
+            message: `Stadium is now ${stadium.isActive ? "active" : "inactive"}`,
             stadium
         });
     });
@@ -147,27 +199,33 @@ class StadiumController {
     deleteStadium = asyncHandler(async (req, res, next) => {
         const { id } = req.params;
 
-        const stadium = await Stadium.findByIdAndDelete(id);
+        const stadium = await Stadium.findById(id);
         if (!stadium) {
-            return next(new ApiError(`Stadium Not Found`, 404));
+            return next(new ApiError("Stadium Not Found", 404));
         }
 
-        if (stadium.stadiumImages && stadium.stadiumImages.length > 0) {
+        await Ticket.updateMany(
+            { stadium: id },
+            { $set: { stadiumStatus: "deleted" } }
+        );
+
+        if (stadium.stadiumImages?.length) {
             for (const img of stadium.stadiumImages) {
                 deleteLocalFile(img);
             }
         }
 
-        if (stadium.stadiumVideos && stadium.stadiumVideos.length > 0) {
+        if (stadium.stadiumVideos?.length) {
             for (const vid of stadium.stadiumVideos) {
                 deleteLocalFile(vid);
             }
         }
 
+        await Stadium.findByIdAndDelete(id);
+
         res.status(200).json({
             status: "success",
-            message: "Stadium deleted successfully",
-            stadium
+            message: "Stadium deleted and related tickets updated successfully"
         });
     });
 
