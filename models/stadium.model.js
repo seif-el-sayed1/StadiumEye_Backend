@@ -21,16 +21,16 @@ const stadiumSchema = new mongoose.Schema({
     negatives: {
         type: [String],
     },
-    tickets:[{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Ticket",
-    }],
+    ticketsCounts: {
+        type: Number,
+        default: 0   
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
     stadiumVideos: {
         type: [String],
-    },
-    services: {
-        type: [String],
-        enum: SERVICES_LIST
     },
     locationLink: {
         type: String,
@@ -65,16 +65,6 @@ const stadiumSchema = new mongoose.Schema({
     },
 
 }, { timestamps: true });
-
-stadiumSchema.pre("findOneAndDelete", async function(next) {
-    const stadium = await this.model.findOne(this.getFilter());
-    if (!stadium) return next();
-
-    // Delete all tickets related to this stadium
-    await mongoose.model("Ticket").deleteMany({ stadium: stadium._id });
-    next();
-});
-
 
 
 module.exports = mongoose.model("Stadium", stadiumSchema);
