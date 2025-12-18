@@ -26,6 +26,7 @@ class StadiumValidator {
         const schema = Joi.object({
             stadiumName: Joi.string().required(),
             city: Joi.string().custom(objectIdValidator).required(),
+            supervisorName: Joi.string().required(),
             stadiumImages: Joi.array().items(Joi.string()).optional(),
             capacity: Joi.number().positive().required(),
             positives: Joi.array().items(Joi.string()).required(),
@@ -34,9 +35,6 @@ class StadiumValidator {
                 .items(Joi.string().custom(objectIdValidator))
                 .optional(),
             stadiumVideos: Joi.array().items(Joi.string()).optional(),
-            services: Joi.array()
-                .items(Joi.string().valid(...SERVICES_LIST))
-                .required(),
             locationLink: Joi.string().required()
         });
         
@@ -72,6 +70,7 @@ class StadiumValidator {
             stadiumName: Joi.string().optional(),
             city: Joi.string().custom(objectIdValidator).optional(),
             stadiumImages: Joi.array().items(Joi.string().uri()).optional(),
+            isActive: Joi.boolean().optional(),
             capacity: Joi.number().positive().optional(),
             positives: Joi.array().items(Joi.string()).optional(),
             negatives: Joi.array().items(Joi.string()).optional(),
