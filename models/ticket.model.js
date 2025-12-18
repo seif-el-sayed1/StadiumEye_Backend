@@ -29,6 +29,11 @@ const ticketSchema = new mongoose.Schema({
         enum: TICKET_STATUS,
         default: "open"
     },
+    stadiumStatus: {
+        type: String,
+        enum: ["active", "inActive", "deleted"],
+        default: "active"
+    },
     observations: {
         type: String,
         required: [true, "Observations are required"]
@@ -89,6 +94,14 @@ const ticketSchema = new mongoose.Schema({
     
 }, { timestamps: true });
 
+
+ticketSchema.post("save", async function(doc, next) {
+    await mongoose.model("Stadium").findByIdAndUpdate(
+        doc.stadium,
+        { $inc: { ticketsCounts: 1 } }
+    );
+    next();
+});
 
 ticketSchema.pre(/^find/, async function (next) {
     this.populate({
