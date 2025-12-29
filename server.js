@@ -17,6 +17,7 @@ require("./startup/logging")(app);
 require("./startup/app")(app);
 require("./startup/db")();
 require("./startup/createSuperAdmin")();
+require("./startup/cronJobs")();
 // Server
 server.listen(PORT, (_) => {
     console.log(`🚀 ~ Server  Running on port ~ ${PORT}`.blue.bold);
