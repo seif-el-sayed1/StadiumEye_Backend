@@ -29,12 +29,21 @@ appRouter.use(`${BASE_URL}/users`, userRoutes);
 
 
 
-appRouter.get("/", (req, res, next) => {
+appRouter.get("/", (req, res) => {
+  const ip = req.ip;
+  const userAgent = req.headers["user-agent"];
+
+  console.log("New Visit:");
+  console.log("IP:", ip);
+  console.log("User-Agent:", userAgent);
+  console.log("----------------------");
+
   res.status(200).json({
     status: true,
     message: "You're Server is up and running!"
   });
 });
+
 
 // Not Found Route
 appRouter.use((req, res, next) => {
