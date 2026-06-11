@@ -60,20 +60,6 @@ const userSchema = mongoose.Schema(
       type: String,
       default: ""
     },
-    city: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "City",
-    },
-    country: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Country",
-    },
-    // region: { type: mongoose.Schema.Types.ObjectId, ref: "Region" },
-    // nationalId: String,
-    // verifiedNationalId: {
-    //   type: Boolean,
-    //   default: false
-    // },
     // Password
     password: {
       type: String,
@@ -187,39 +173,6 @@ userSchema.methods.generateToken = async function () {
 
   return { token, tokenExpDate };
 };
-
-userSchema.pre(/\bfind/, function (next) {
-  let lang = this.getOptions().lang || this.lang || "en";
-  if (this.getOptions().userLocationPopulation) {
-    this.populate({
-      path: "city",
-      model: "City",
-      select: `_id ${
-        lang ? (lang === "all" ? "nameEn nameAr" : `name${capitalizeFirstLetter(lang)}`) : "nameEn"
-      }`
-    });
-
-//     this.populate({
-//       path: "region",
-//       model: "Region",
-//       select: `_id ${
-//         lang ? (lang === "all" ? "nameEn nameAr" : `name${capitalizeFirstLetter(lang)}`) : "nameEn"
-//       }`
-//     });
-
-    this.populate({
-      path: "country",
-      model: "Country",
-      select: `_id ${
-        lang ? (lang === "all" ? "nameEn nameAr" : `name${capitalizeFirstLetter(lang)}`) : "nameEn"
-      }`
-    });
-  }
-
-  if (this.getOptions().skipPopulation) return next();
-
-  next();
-});
 
 userSchema.methods.comparePassword = async function (password) {
   if (this.loginType !== "email") {
