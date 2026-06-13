@@ -23,7 +23,7 @@ const processDetections = async (url, modelType, fileType = "image") => {
         throw new Error(`Python script not found at path: ${pythonScript}`);
     }
 
-    console.log("Running Python script at: ".green.bold + pythonScript.yellow.bold); 
+    console.log("Running Python script at: ".green.bold + pythonScript.yellow.bold);
 
     const detections = await new Promise((resolve, reject) => {
         exec(`python "${pythonScript}" "${tempFile}"`, (err, stdout, stderr) => {
@@ -39,10 +39,26 @@ const processDetections = async (url, modelType, fileType = "image") => {
                 console.error(stderr);
                 return reject(err);
             }
+
             try {
-                resolve(JSON.parse(stdout));
+                // Extract the last valid JSON line to avoid YOLO's stdout noise
+                const lines = stdout.trim().split("\n");
+                const jsonLine = lines
+                    .reverse()
+                    .find(
+                        (line) =>
+                            line.trim().startsWith("[") ||
+                            line.trim().startsWith("{")
+                    );
+
+                if (!jsonLine) {
+                    throw new Error(`No valid JSON found in stdout: ${stdout}`);
+                }
+
+                resolve(JSON.parse(jsonLine));
             } catch (parseErr) {
-                reject(parseErr);
+                console.error("Raw stdout was:", stdout);
+                reject(new Error(`JSON parse failed. stdout: ${stdout}`));
             }
         });
     });
