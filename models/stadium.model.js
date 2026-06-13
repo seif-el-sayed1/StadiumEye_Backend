@@ -9,6 +9,15 @@ const stadiumSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "City",
     },
+    supervisorName: {
+        type: String,
+    },
+    supervisorPhone: {
+        type: String,
+    },
+    supervisorEmail: {
+        type: String,
+    },
     stadiumImages: {
         type: [String],
     }, 
@@ -66,5 +75,7 @@ const stadiumSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+
+stadiumSchema.index({ stadiumName: 1 });
 
 module.exports = mongoose.model("Stadium", stadiumSchema);
