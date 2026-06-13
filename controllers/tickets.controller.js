@@ -30,59 +30,47 @@ class TicketsController {
     //@route POST /tickets
     //@access Public
     addTicket = asyncHandler(async (req, res, next) => {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
         try {
             const ticketImages = [];
             const ticketVideos = [];
             const ticketVoices = [];
 
+            // Categorize uploaded files by MIME type into separate arrays
             if (req.files && req.files.length > 0) {
                 req.files.forEach((file) => {
-
-                    if (file.mimetype.startsWith("image")) {
+                    if (file.mimetype.startsWith("image"))
                         ticketImages.push(`/uploads/images/${file.filename}`);
-                    }
-
-                    if (file.mimetype.startsWith("video")) {
+                    if (file.mimetype.startsWith("video"))
                         ticketVideos.push(`/uploads/videos/${file.filename}`);
-                    }
-
-                    if (file.mimetype.startsWith("audio")) {
+                    if (file.mimetype.startsWith("audio"))
                         ticketVoices.push(`/uploads/voices/${file.filename}`);
-                    }
-
                 });
             }
 
-            req.body.ticketImages = ticketImages;
-            req.body.ticketVideos = ticketVideos;
-            req.body.ticketVoices = ticketVoices;
+            const { mode, modelType, ...ticketData } = req.body;
 
-            const ticket = await Tickets.create(req.body);
+            ticketData.ticketImages = ticketImages;
+            ticketData.ticketVideos = ticketVideos;
+            ticketData.ticketVoices = ticketVoices;
+
+            const [ticket] = await Tickets.create([ticketData], { session });
 
             await ticket.populate([
                 { path: "stadium", select: "stadiumName" },
                 { path: "createdBy", select: "firstName lastName email" }
             ]);
 
-            const admins = await Admin.find().select("email");
+            // AI Detection Mode Only runs if the user chose AI mode and skipped entirely for manual mode
+            // 
+            if (mode === "ai") {
+                const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-            for (const admin of admins) {
-                await EmailController.reportEmailToAdmin(admin.email, ticket);
-            }
-
-            await EmailController.reportEmailToUser(
-                ticket.createdBy.email,
-                ticket
-            );
-
-            const modelType = req.body.modelType || "safety";
-            const baseUrl = `${req.protocol}://${req.get("host")}`;
-
-            if (ticketImages.length > 0) {
                 for (const imgUrl of ticketImages) {
-                    const fullImgUrl = `${baseUrl}${imgUrl}`; // Full URL for AI
                     const rawDetections = await processDetections(
-                        fullImgUrl,
+                        `${baseUrl}${imgUrl}`,
                         modelType,
                         "image"
                     );
@@ -93,24 +81,26 @@ class TicketsController {
                             ? rawDetections.detections
                             : [];
 
-                    await Tickets.findByIdAndUpdate(ticket._id, {
-                        $push: {
-                            ticketDetections: {
-                                url: imgUrl,
-                                type: "image",
-                                modelType,
-                                detections
-                            }
-                        }
-                    });
-                }
-            }
+                    // If AI returned no detections, abort the entire transaction (the ticket will NOT be saved to the DB)
+                    if (detections.length === 0) {
+                        await session.abortTransaction();
+                        session.endSession();
+                        return res.status(422).json({
+                            status: "error",
+                            message: "AI model did not detect any results. Ticket was not saved. Please try again or switch to manual mode."
+                        });
+                    }
 
-            if (ticketVideos.length > 0) {
+                    await Tickets.findByIdAndUpdate(
+                        ticket._id,
+                        { $push: { ticketDetections: { url: imgUrl, type: "image", modelType, detections } } },
+                        { session }
+                    );
+                }
+
                 for (const vidUrl of ticketVideos) {
-                    const fullVidUrl = `${baseUrl}${vidUrl}`; // Full URL for AI
                     const rawDetections = await processDetections(
-                        fullVidUrl,
+                        `${baseUrl}${vidUrl}`,
                         modelType,
                         "video"
                     );
@@ -121,27 +111,39 @@ class TicketsController {
                             ? rawDetections.detections
                             : [];
 
-                    await Tickets.findByIdAndUpdate(ticket._id, {
-                        $push: {
-                            ticketDetections: {
-                                url: vidUrl,
-                                type: "video",
-                                modelType,
-                                detections
-                            }
-                        }
-                    });
+                    if (detections.length === 0) {
+                        await session.abortTransaction();
+                        session.endSession();
+                        return res.status(422).json({
+                            status: "error",
+                            message: "AI model did not detect any results. Ticket was not saved. Please try again or switch to manual mode."
+                        });
+                    }
+
+                    await Tickets.findByIdAndUpdate(
+                        ticket._id,
+                        { $push: { ticketDetections: { url: vidUrl, type: "video", modelType, detections } } },
+                        { session }
+                    );
                 }
             }
 
-            const populatedTicket = await Tickets.findById(ticket._id);
+            await session.commitTransaction();
+            session.endSession();
 
-            res.status(201).json({
-                status: "success",
-                data: populatedTicket
-            });
+            // send emails to admins and user
+            const admins = await Admin.find().select("email");
+            for (const admin of admins) {
+                await EmailController.reportEmailToAdmin(admin.email, ticket);
+            }
+            await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
+
+            const populatedTicket = await Tickets.findById(ticket._id);
+            res.status(201).json({ status: "success", data: populatedTicket });
 
         } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
             next(error);
         }
     });
