@@ -7,14 +7,24 @@ const ApiError = require("../utils/ApiError");
 const asyncHandler = require("express-async-handler");
 
 class TicketsValidator {
-    addTicketValidator(req, res, next) {
 
+    addTicketValidator = asyncHandler(async (req, res, next) => {
         const schema = Joi.object({
             createdBy: Joi.custom(objectIdValidator).required(),
             stadium: Joi.custom(objectIdValidator).required(),
             area: Joi.string().valid(...STADIUM_AREA).required(),
             ticketType: Joi.string().valid(...TICKET_TYPES).required(),
-            observations: Joi.string().required(),
+
+            // Determines whether the ticket is created via AI detection or manual user input
+            mode: Joi.string().valid("manual", "ai").required(),
+
+            // Required only in manual mode — in AI mode the AI provides the findings
+            observations: Joi.string().when("mode", {
+                is: "manual",
+                then: Joi.required(),
+                otherwise: Joi.optional(),
+            }),
+
             challenges: Joi.string().optional(),
             lessonsLearned: Joi.string().optional(),
 
@@ -22,24 +32,19 @@ class TicketsValidator {
             ticketImages: Joi.array().items(Joi.string()).optional(),
             ticketVoices: Joi.array().items(Joi.string()).optional(),
 
+            // Required when mode is "ai" and forbidden in manual mode since AI is not involved
             modelType: Joi.string()
                 .valid("safety", "visualPollution")
-                .when("ticketImages", {
-                    is: Joi.array().min(1),
+                .when("mode", {
+                    is: "ai",
                     then: Joi.required(),
-                })
-                .when("ticketVideos", {
-                    is: Joi.array().min(1),
-                    then: Joi.required(),
+                    otherwise: Joi.forbidden(),
                 }),
         });
-
         req.body.createdBy = req.user._id;
-
         joiErrorHandler(schema, req);
-
         next();
-    }
+    });
 
     checkIfTicketIsOpen = asyncHandler(async (req, res, next) => {
         const ticket = await Tickets.findById(req.params.id);
@@ -57,7 +62,7 @@ class TicketsValidator {
         next();
     });
 
-    updateTicketValidator(req, res, next) {
+    updateTicketValidator = asyncHandler(async (req, res, next) => {
         const schema = Joi.object({
             area: Joi.string().valid(...STADIUM_AREA).optional(),
             ticketType: Joi.string().valid(...TICKET_TYPES).optional(),
@@ -100,7 +105,7 @@ class TicketsValidator {
         }
 
         next();
-    }
+    });
 
 
 }
