@@ -2,6 +2,7 @@ const Joi = require("joi");
 const joiErrorHandler = require("./joiErrorHandler.js");
 const { objectIdValidator } = require("./validatorComponents.js");
 const { SERVICES_LIST } = require("../utils/constants");
+const { phoneNumberValidator } = require("./validatorComponents.js");
 const extractLatLong = require("../utils/extractCoordinates.js");
 
 class StadiumValidator {
@@ -27,6 +28,17 @@ class StadiumValidator {
             stadiumName: Joi.string().required(),
             city: Joi.string().custom(objectIdValidator).required(),
             supervisorName: Joi.string().required(),
+            supervisorPhone: Joi.string()
+                .custom(phoneNumberValidator)
+                .required()
+                .messages({
+                    "any.required": "Phone is required",
+                    "string.pattern.base": "Invalid Phone Number"
+                }),
+            services: Joi.array()
+            .items(Joi.string().valid(...SERVICES_LIST))
+            .required(),
+            supervisorEmail: Joi.string().email().required(),
             stadiumImages: Joi.array().items(Joi.string()).optional(),
             capacity: Joi.number().positive().required(),
             positives: Joi.array().items(Joi.string()).required(),
