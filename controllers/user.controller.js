@@ -12,7 +12,7 @@ class UserController {
     //@route GET /api/v1/users
     //@access Private
     getAllUsers = asyncHandler(async (req, res, next) => {
-        const features = new ApiFeatures(User.find().select("firstName lastName email profilePicture createdAt role phone"), req.query, "User")
+        const features = new ApiFeatures(User.find().select("firstName lastName email profilePicture createdAt role phone isBlocked"), req.query, "User")
             .search()
             .filter()
             .paginate()
@@ -63,7 +63,7 @@ class UserController {
             user,
         });
     });
-    
+
     //@desc Update me
     //@route PUT /api/v1/users/:id
     //@access Private
@@ -73,7 +73,7 @@ class UserController {
         if (req.body.profilePicture && oldUser.profilePicture) {
             await FirebaseController.deleteOldImage(oldUser.profilePicture, "Users");
         }
-        
+
         const user = await User.findByIdAndUpdate(req.user._id, req.body, {
             new: true,
             runValidators: true,
@@ -112,6 +112,48 @@ class UserController {
             user,
         });
     });
+
+    //@desc block user
+    //@route PATCH /api/v1/users/:id/block
+    //@access Private
+    blockUser = asyncHandler(async(req, res, next) => {
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { isBlocked: true },
+            { new: true, runValidators: true }
+        );
+
+        if (!user) {
+            return next(new ApiError(translate("User not found", req.headers.lang), 404));
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "User blocked successfully",
+            data: user
+        });
+    })
+
+    //@desc unblock user
+    //@route PATCH /api/v1/users/:id/unblock
+    //@access Private
+    unblockUser = asyncHandler(async(req, res, next) => {
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { isBlocked: false },
+            { new: true, runValidators: true }
+        );
+
+        if (!user) {
+            return next(new ApiError(translate("User not found", req.headers.lang), 404));
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "User unblocked successfully",
+            data: user
+        });
+    })
 }
 
 module.exports = new UserController();
