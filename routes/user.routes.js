@@ -1,6 +1,6 @@
 const express = require("express");
 
-const { USER, ADMIN, STAFF } = require("../utils/constants");
+const { USER, ADMIN, STAFF, SUPER_ADMIN } = require("../utils/constants");
 
 // Middlewares
 const { protect, allowedTo } = require("../middlewares/auth.middleware");
@@ -41,6 +41,20 @@ router
         UserController.deactivateMe
     )
     
+router.route("/:id/block")
+    .patch(
+        protect,
+        allowedTo(ADMIN, SUPER_ADMIN),
+        UserController.blockUser
+    );
+
+router.route("/:id/unblock")
+    .patch(
+        protect,
+        allowedTo(ADMIN, SUPER_ADMIN),
+        UserController.unblockUser
+    );
+
 router
     .route("/:id")
     .get(
