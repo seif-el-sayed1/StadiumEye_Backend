@@ -40,9 +40,9 @@ const ticketSchema = new mongoose.Schema({
     },
     challenges: String,
     lessonsLearned: String,
-    ticketVideos: [String],
-    ticketImages: [String],
-    ticketVoices:[String],
+    ticketVideos: { type: [String], default: undefined },
+    ticketImages: { type: [String], default: undefined },
+    ticketVoices: { type: [String], default: undefined },
     priority: {
         type: String,
         enum: TICKET_PRIORITIES,
@@ -73,24 +73,31 @@ const ticketSchema = new mongoose.Schema({
         before: [String],
         after: [String],
     },
-    ticketDetections: [
-        {
-            url: String,       
-            type: { type: String, enum: ["image", "video"] },
-            modelType: { type: String, enum: ["safety", "visualPollution"] }, 
-            detections: [
-                {
-                    Id: Number,
-                    ClassName: String,
-                    confidence: Number,
-                    x: Number,
-                    y: Number,
-                    width: Number,
-                    height: Number
-                }
-            ]
-        }
-    ]
+    ticketDetections: {
+        type: [
+            {
+                url: String,
+                type: { type: String, enum: ["image", "video"] },
+                modelType: { type: String, enum: ["safety", "visualPollution"] },
+                detections: [
+                    {
+                        Id: Number,
+                        ClassName: String,
+                        confidence: Number,
+                        x: Number,
+                        y: Number,
+                        width: Number,
+                        height: Number
+                    }
+                ]
+            }
+        ],
+        default: undefined
+    },
+    mode: {
+        type: String,
+        enum: ["manual", "ai"],
+    }
     
 }, { timestamps: true });
 
