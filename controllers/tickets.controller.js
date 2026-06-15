@@ -52,9 +52,10 @@ class TicketsController {
 
             const { mode, modelType, ...ticketData } = req.body;
 
-            ticketData.ticketImages = ticketImages;
-            ticketData.ticketVideos = ticketVideos;
-            ticketData.ticketVoices = ticketVoices;
+            if (ticketImages.length > 0) ticketData.ticketImages = ticketImages;
+            if (ticketVideos.length > 0) ticketData.ticketVideos = ticketVideos;
+            if (ticketVoices.length > 0) ticketData.ticketVoices = ticketVoices;
+            ticketData.mode = mode;
 
             const [ticket] = await Tickets.create([ticketData], { session });
 
@@ -64,7 +65,6 @@ class TicketsController {
             ]);
 
             // AI Detection Mode Only runs if the user chose AI mode and skipped entirely for manual mode
-            // 
             if (mode === "ai") {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
 
