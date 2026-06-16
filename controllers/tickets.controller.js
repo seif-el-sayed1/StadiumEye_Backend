@@ -10,6 +10,7 @@ const Team = require("../models/teams.model");
 const Admin = require("../models/admin.model");
 const Stadium = require("../models/stadium.model");
 const EmailController = require("./email.controller");
+const { generateSingleTicketPDF } = require("../utils/generateReports");
 const  processDetections  = require("../utils/processDetections");
 
 const deleteLocalFile = (filePath) => {
@@ -483,6 +484,37 @@ class TicketsController {
             ticket
         });
     });
+
+    //@desc Generate PDF for a single ticket
+    //@route GET /tickets/:id/report
+    //@access Private(User, admin)
+    generateTicketReport = asyncHandler(async( req, res, next) => {
+        const { id } = req.params;
+        const { includeMedia = "true" } = req.query;
+
+        if (!id || id.length !== 24) {
+            return res.status(400).json({ message: "Valid Ticket ID is required" });
+        }
+
+        const ticket = await Tickets.findById(id)
+            .populate("stadium createdBy assignedTo closedBy rejectedBy")
+            .lean();
+
+        if (!ticket) {
+            return res.status(404).json({ message: "Ticket not found" });
+        }
+
+        const pdfBuffer = await generateSingleTicketPDF(ticket, {
+            includeMedia: includeMedia.toLowerCase() === "true"
+        });
+
+        // Response Headers
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="Ticket-${id}.pdf"`);
+        res.setHeader("Content-Length", pdfBuffer.length);
+
+        res.send(pdfBuffer);
+    })
 
 }
 
