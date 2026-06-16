@@ -66,7 +66,7 @@ const generatePDFReport = async (filters, options = {}) => {
     .lean();
 
   const doc = new PDFDocument({
-    margin: 60,
+    margin: 50,
     size: "A4",
     info: { Title: "Stadium Eye Report" }
   });
@@ -75,12 +75,15 @@ const generatePDFReport = async (filters, options = {}) => {
   doc.on("data", buffers.push.bind(buffers));
 
   const PRIMARY_COLOR = "#0A7F3F";
+  const TEXT_MAIN = "#222222";
+  const TEXT_MUTED = "#555555";
+  const BG_LIGHT = "#f9fafb";
+  const BORDER_COLOR = "#e5e7eb";
+  const BASE_URL = process.env.SERVER_URL || "https://your-domain.com";
 
   const drawPageBorder = () => {
-    const w = doc.page.width;
-    const h = doc.page.height;
-    doc.lineWidth(1).strokeColor("#333333")
-       .rect(40, 40, w - 80, h - 80)
+    doc.lineWidth(2).strokeColor(PRIMARY_COLOR)
+       .rect(35, 35, doc.page.width - 70, doc.page.height - 70)
        .stroke();
   };
   drawPageBorder();
@@ -91,6 +94,7 @@ const generatePDFReport = async (filters, options = {}) => {
   }
 
   const logoUrl = process.env.LOGO_URL;
+  let currentY = 50;
 
   try {
     const response = await fetch(logoUrl);
@@ -98,38 +102,37 @@ const generatePDFReport = async (filters, options = {}) => {
       const arrayBuffer = await response.arrayBuffer();
       const logoBuffer = Buffer.from(arrayBuffer);
 
-      const logoSize = 80;
-      const logoX = 70;
+      const logoSize = 60;
+      const logoX = 55;
       const logoY = 50;
-      const cornerRadius = 18;
-
-      doc.fillColor("#ffffff")
-         .roundedRect(logoX - 5, logoY - 5, logoSize + 10, logoSize + 10, cornerRadius + 5)
-         .fill();
 
       doc.save();
-      doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5).clip();
+      doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2).clip();
       doc.image(logoBuffer, logoX, logoY, { width: logoSize, height: logoSize });
       doc.restore();
 
-      
-      doc.fontSize(32).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
-         .text("Stadium Eye", logoX + logoSize + 30, logoY + 22);
+      doc.fontSize(22).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+         .text("Stadium Eye", logoX + logoSize + 15, logoY + 15, { width: 250 });
     }
   } catch (err) {
-    doc.fontSize(32).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
-       .text("Stadium Eye", 0, 80, { align: "center" });
+    doc.fontSize(22).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+       .text("Stadium Eye", 55, 65, { width: 250 });
   }
 
-  doc.moveDown(1.5);
+  doc.fontSize(10).fillColor(TEXT_MUTED).font("Helvetica")
+     .text(`Report Generated on: ${new Date().toLocaleDateString("en-GB")}`, doc.page.width - 250, 65, { align: "right", width: 195 });
+
+  currentY = 130;
+  doc.lineWidth(1).strokeColor(BORDER_COLOR)
+     .moveTo(55, currentY).lineTo(doc.page.width - 55, currentY).stroke();
 
   if (!tickets || tickets.length === 0) {
-    doc.moveDown(8);
-    doc.fontSize(18).fillColor("#666666")
-       .text("No tickets found for the selected filters", { align: "center" });
-    doc.moveDown(1);
-    doc.fontSize(12).fillColor(PRIMARY_COLOR)
-       .text(formatDateRange(start, end), { align: "center" });
+    currentY += 50;
+    doc.fontSize(16).fillColor(TEXT_MUTED).font("Helvetica-Bold")
+       .text("No tickets found for the selected filters", 55, currentY, { align: "center", width: doc.page.width - 110 });
+    currentY += 30;
+    doc.fontSize(11).fillColor(PRIMARY_COLOR).font("Helvetica")
+       .text(formatDateRange(start, end), 55, currentY, { align: "center", width: doc.page.width - 110 });
     doc.end();
     return new Promise(res => doc.on("end", () => res(Buffer.concat(buffers))));
   }
@@ -144,29 +147,38 @@ const generatePDFReport = async (filters, options = {}) => {
   let firstStadium = true;
 
   for (const { stadium, tickets: stadiumTickets } of Object.values(grouped)) {
+    if (currentY > doc.page.height - 150) {
+      doc.addPage();
+      currentY = 60;
+    }
+
     if (!firstStadium) {
-      doc.moveDown(1.5);
-      doc.lineWidth(2).strokeColor(PRIMARY_COLOR)
-         .moveTo(100, doc.y).lineTo(500, doc.y).stroke();
-      doc.moveDown(1.5);
+      currentY += 15;
+      doc.lineWidth(1.5).strokeColor(PRIMARY_COLOR)
+         .moveTo(150, currentY).lineTo(doc.page.width - 150, currentY).stroke();
+      currentY += 20;
     }
     firstStadium = false;
 
-    doc.fontSize(24).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
-       .text(stadium?.stadiumName || "Unknown Stadium", 60, doc.y, {
-         align: "center",
-         width: 480,
-         underline: true
-       });
+    currentY += 10;
+    doc.fontSize(18).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+       .text(stadium?.stadiumName || "Unknown Stadium", 55, currentY, { align: "center", width: doc.page.width - 110 });
+    currentY += 30;
 
-    stadiumTickets.forEach((t, idx) => {
-      if (idx > 0) {
-        doc.moveDown(1);
-        doc.lineWidth(0.8).strokeColor("#86efac")
-           .moveTo(60, doc.y).lineTo(540, doc.y).stroke();
+    for (let idx = 0; idx < stadiumTickets.length; idx++) {
+      const t = stadiumTickets[idx];
+
+      if (currentY > doc.page.height - 180) {
+        doc.addPage();
+        currentY = 60;
       }
 
-      doc.moveDown(1.2);
+      if (idx > 0) {
+        currentY += 10;
+        doc.lineWidth(0.8).strokeColor(BORDER_COLOR)
+           .moveTo(55, currentY).lineTo(doc.page.width - 55, currentY).stroke();
+        currentY += 15;
+      }
 
       const email = t.createdBy?.email || "N/A";
       const dateStr = new Date(t.createdAt).toLocaleString("en-GB", {
@@ -175,58 +187,106 @@ const generatePDFReport = async (filters, options = {}) => {
       });
 
       doc.fontSize(11).fillColor(PRIMARY_COLOR).font("Helvetica-Bold");
-      doc.text(`Created By: ${email}`, 60, doc.y, { continued: true });
-      doc.text(dateStr, { align: "right", width: 480 });
-      doc.moveDown(0.8);
+      doc.text(`Created By: ${email}`, 55, currentY, { continued: true });
+      doc.text(dateStr, { align: "right", width: doc.page.width - 110 });
+      currentY += 22;
 
-      const leftX = 60;
-      const rightX = 310;
-      let colY = doc.y;
+      const colLeftX = 55;
+      const colRightX = 310;
+      const rowHeight = 25;
 
-      doc.fontSize(10.5).fillColor("#333333");
-      doc.text(`Area: ${t.area || "-"}`, leftX, colY);
-      doc.text(`Type: ${t.ticketType || "-"}`, leftX, colY + 20);
-      doc.text(`Status: ${t.status || "-"}`, leftX, colY + 40);
-      doc.text(`Priority: ${t.priority || "-"}`, rightX, colY);
-      doc.text(`Assigned To: ${t.assignedTo?.teamName || "Not Assigned"}`, rightX, colY + 20);
-      doc.text(`Closed By: ${t.closedBy ? `${t.closedBy.firstName || ""} ${t.closedBy.lastName || ""}`.trim() : "-"}`, rightX, colY + 40);
-      doc.text(`Rejected By: ${t.rejectedBy?.email || "-"}`, rightX, colY + 60);
+      const leftRows = [
+        { label: "Area:", val: t.area || "-" },
+        { label: "Type:", val: t.ticketType || "-" },
+        { label: "Status:", val: t.status || "-" }
+      ];
 
-      doc.moveDown(1.2);
+      const rightRows = [
+        { label: "Priority:", val: t.priority || "-" },
+        { label: "Assigned To:", val: t.assignedTo?.teamName || "Not Assigned" },
+        { label: "Closed By:", val: t.closedBy ? `${t.closedBy.firstName || ""} ${t.closedBy.lastName || ""}`.trim() : "-" },
+        { label: "Rejected By:", val: t.rejectedBy?.email || "-" }
+      ];
 
-      doc.fontSize(10).fillColor(PRIMARY_COLOR).font("Helvetica-Bold");
-      doc.text("Observations:", 60);
+      const totalGridRows = Math.max(leftRows.length, rightRows.length);
+      for (let r = 0; r < totalGridRows; r++) {
+        let yPos = currentY + (r * rowHeight);
 
-      const obs = t.observations || "No observations provided.";
-      const hasArabic = /[\u0600-\u06FF]/.test(obs);
+        let lItem = leftRows[r];
+        if (lItem) {
+          doc.font("Helvetica").fontSize(10.5).fillColor(TEXT_MUTED).text(lItem.label, colLeftX, yPos, { width: 55 });
+          doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(lItem.val, colLeftX + 60, yPos, { width: 175 });
+        }
 
-      if (hasArabic && fs.existsSync(ARABIC_FONT)) {
-        doc.font("ArabicFont").fontSize(10).fillColor("#444444")
-           .text(obs.length > 600 ? obs.slice(0, 600) + "..." : obs, 60, doc.y + 10, {
-             width: 480,
-             align: "right",
-             direction: "rtl",
-             features: ['rtlar'],
-             indent: 15,
-             lineGap: 3
-           });
-      } else {
-        doc.fontSize(10).fillColor("#444444")
-           .text(obs.length > 600 ? obs.slice(0, 600) + "..." : obs, 60, doc.y + 10, {
-             width: 480,
-             align: "justify",
-             indent: 15
-           });
+        let rItem = rightRows[r];
+        if (rItem) {
+          doc.font("Helvetica").fontSize(10.5).fillColor(TEXT_MUTED).text(rItem.label, colRightX, yPos, { width: 85 });
+          doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(rItem.val, colRightX + 90, yPos, { width: 145 });
+        }
       }
 
-      if (includeMedia && (t.ticketImages?.length || t.ticketVideos?.length || t.ticketVoices?.length)) {
-        const spaceLeft = doc.page.height - doc.y - 100;
-        if (spaceLeft < 80) doc.addPage();
+      currentY += (totalGridRows * rowHeight) + 15;
 
-        doc.moveDown(1.2);
-        doc.fontSize(10).fillColor(PRIMARY_COLOR).font("Helvetica-Bold");
-        doc.text("Media:", 60);
-        doc.moveDown(0.7);
+      if (currentY > doc.page.height - 120) {
+        doc.addPage();
+        currentY = 60;
+      }
+
+      doc.fontSize(11).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+         .text("Observations:", 55, currentY);
+      currentY += 18;
+
+      let obs = t.observations || "No observations provided.";
+      const hasArabic = /[\u0600-\u06FF]/.test(obs);
+      if (obs.length > 600) obs = obs.slice(0, 600) + "...";
+
+      if (hasArabic) {
+        obs = obs.split(' ').reverse().join(' ');
+      }
+
+      const boxPadding = 10;
+      const boxWidth = doc.page.width - 110;
+      let textHeight = 0;
+
+      doc.fontSize(10).fillColor(TEXT_MAIN);
+      if (hasArabic && fs.existsSync(ARABIC_FONT)) {
+        doc.font("ArabicFont");
+        textHeight = doc.heightOfString(obs, { width: boxWidth - (boxPadding * 2), align: "right" });
+      } else {
+        doc.font("Helvetica");
+        textHeight = doc.heightOfString(obs, { width: boxWidth - (boxPadding * 2), align: "justify" });
+      }
+
+      if (currentY + textHeight + (boxPadding * 2) > doc.page.height - 80) {
+        doc.addPage();
+        currentY = 60;
+      }
+
+      doc.save();
+      doc.lineWidth(1).strokeColor(BORDER_COLOR).fillColor(BG_LIGHT)
+         .roundedRect(55, currentY, boxWidth, textHeight + (boxPadding * 2), 4)
+         .fillAndStroke();
+      doc.restore();
+
+      if (hasArabic && fs.existsSync(ARABIC_FONT)) {
+        doc.font("ArabicFont").fillColor(TEXT_MAIN)
+           .text(obs, 55 + boxPadding, currentY + boxPadding, { width: boxWidth - (boxPadding * 2), align: "right" });
+      } else {
+        doc.font("Helvetica").fillColor(TEXT_MAIN)
+           .text(obs, 55 + boxPadding, currentY + boxPadding, { width: boxWidth - (boxPadding * 2), align: "justify" });
+      }
+
+      currentY += textHeight + (boxPadding * 2) + 15;
+
+      if (includeMedia && (t.ticketImages?.length || t.ticketVideos?.length || t.ticketVoices?.length)) {
+        if (currentY > doc.page.height - 100) {
+          doc.addPage();
+          currentY = 60;
+        }
+
+        doc.fontSize(11).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+           .text("Media:", 55, currentY);
+        currentY += 18;
 
         const mediaItems = [];
         t.ticketImages?.forEach((_, i) => mediaItems.push({ label: `Image ${i + 1}`, url: t.ticketImages[i] }));
@@ -234,46 +294,50 @@ const generatePDFReport = async (filters, options = {}) => {
         t.ticketVoices?.forEach((_, i) => mediaItems.push({ label: `Voice ${i + 1}`, url: t.ticketVoices[i] }));
 
         if (mediaItems.length > 0) {
-          const availableWidth = 480;
-          const minWidthPerItem = 90;
-          let maxPerRow = Math.floor(availableWidth / minWidthPerItem);
-          maxPerRow = Math.max(2, Math.min(6, maxPerRow));
+          let mediaX = 55;
+          const itemWidth = 100;
+          const itemGap = 20;
 
-          doc.fontSize(9.8).fillColor("#166534");
-
-          let y = doc.y;
-          let x = 70;
-          const lineHeight = 18;
-          const dynamicSpacing = availableWidth / maxPerRow;
-
-          mediaItems.forEach((item, i) => {
-            if (i % maxPerRow === 0 && i !== 0) {
-              y += lineHeight;
-              x = 70;
+          mediaItems.forEach((item) => {
+            if (mediaX + itemWidth > doc.page.width - 55) {
+              currentY += 22;
+              mediaX = 55;
             }
-            if (y + lineHeight > doc.page.height - 100) {
+
+            if (currentY > doc.page.height - 80) {
               doc.addPage();
-              y = 100;
-              x = 70;
+              currentY = 60;
+              mediaX = 55;
             }
-            doc.text(item.label, x, y, {
-              link: item.url,
-              underline: true,
-              continued: false
-            });
-            x += dynamicSpacing;
+
+            let finalUrl = item.url || "";
+            if (finalUrl.startsWith('file:///')) {
+              finalUrl = finalUrl.replace('file:///', `${BASE_URL}/`);
+            } else if (finalUrl.startsWith('/')) {
+              finalUrl = `${BASE_URL}${finalUrl}`;
+            } else if (finalUrl && !finalUrl.startsWith('http')) {
+              finalUrl = `${BASE_URL}/${finalUrl}`;
+            }
+
+            doc.fontSize(10).font("Helvetica").fillColor("#0066cc")
+               .text(item.label, mediaX, currentY, { link: finalUrl, underline: true, width: itemWidth });
+            
+            mediaX += itemWidth + itemGap;
           });
-          doc.y = y + lineHeight + 15;
+          currentY += 25;
         }
       }
-
-      if (doc.y > 720) doc.addPage();
-    });
+      currentY += 15;
+    }
   }
 
-  doc.moveDown(2);
-  doc.fontSize(12).fillColor(PRIMARY_COLOR)
-     .text(formatDateRange(start, end), { align: "center" });
+  if (currentY > doc.page.height - 100) {
+    doc.addPage();
+    currentY = 60;
+  }
+  currentY += 15;
+  doc.fontSize(11).fillColor(PRIMARY_COLOR).font("Helvetica")
+     .text(formatDateRange(start, end), 55, currentY, { align: "center", width: doc.page.width - 110 });
 
   while (doc.bufferedPageRange().count > 1 && doc.y < 150) {
     doc.bufferedPages.pop();
@@ -433,7 +497,213 @@ const generateExcelReport = async (filters) => {
   return await wb.writeToBuffer();
 };
 
+// Single Ticket PDF Generator
+const generateSingleTicketPDF = async (ticket, options = {}) => {
+  const { includeMedia = true } = options;
+
+  if (!ticket) throw new Error("Ticket data is required");
+
+  const doc = new PDFDocument({
+    margin: 50,
+    size: "A4",
+    info: { Title: `Ticket Report` }
+  });
+
+  const buffers = [];
+  doc.on("data", buffers.push.bind(buffers));
+
+  const PRIMARY_COLOR = "#0A7F3F";
+  const TEXT_MAIN = "#222222";
+  const TEXT_MUTED = "#555555";
+  const BG_LIGHT = "#f9fafb";
+  const BORDER_COLOR = "#e5e7eb";
+
+  const drawPageBorder = () => {
+    doc.lineWidth(2).strokeColor(PRIMARY_COLOR)
+       .rect(35, 35, doc.page.width - 70, doc.page.height - 70)
+       .stroke();
+  };
+  drawPageBorder();
+  doc.on("pageAdded", drawPageBorder);
+
+  if (fs.existsSync(ARABIC_FONT)) {
+    doc.registerFont('ArabicFont', ARABIC_FONT);
+  }
+
+  const logoSize = 60;
+  const logoX = 55;
+  const logoY = 50;
+
+  try {
+    const response = await fetch(process.env.LOGO_URL);
+    if (response.ok) {
+      const logoBuffer = Buffer.from(await response.arrayBuffer());
+      doc.save();
+      doc.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2).clip();
+      doc.image(logoBuffer, logoX, logoY, { width: logoSize, height: logoSize });
+      doc.restore();
+    }
+  } catch (e) {}
+
+  doc.fontSize(22).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+     .text("Stadium Eye", logoX + logoSize + 15, logoY + 15, { width: 250 });
+
+  const idText = `#${ticket._id}`;
+  doc.fontSize(11).fillColor(TEXT_MUTED).font("Helvetica-Bold")
+     .text(idText, doc.page.width - 250, logoY + 20, { align: "right", width: 195 });
+
+  let currentY = 130;
+  doc.lineWidth(1).strokeColor(BORDER_COLOR)
+     .moveTo(55, currentY).lineTo(doc.page.width - 55, currentY).stroke();
+
+  currentY += 20;
+  
+  doc.fontSize(18).fillColor(TEXT_MAIN).font("Helvetica-Bold")
+     .text(ticket.stadium?.stadiumName || "Unknown Stadium", 55, currentY, { align: "center", width: doc.page.width - 110 });
+
+  currentY += doc.currentLineHeight() + 10;
+
+  const dateStr = new Date(ticket.createdAt).toLocaleString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+
+  doc.fontSize(10).fillColor(TEXT_MUTED).font("Helvetica");
+  doc.text(`Created By: ${ticket.createdBy?.email || "N/A"}`, 55, currentY, { continued: true });
+  doc.text(`  |  Date: ${dateStr}`, { align: "right", width: doc.page.width - 110 });
+
+  currentY += 35;
+
+  const rowHeight = 28;
+  const colLeftX = 55;
+  const colRightX = 310;
+
+  const leftRows = [
+    { label: "Area:", val: ticket.area || "-" },
+    { label: "Type:", val: ticket.ticketType || "-" },
+    { label: "Status:", val: ticket.status || "-" },
+    { label: "Priority:", val: ticket.priority || "-" }
+  ];
+
+  const rightRows = [
+    { label: "Assigned To:", val: ticket.assignedTo?.teamName || "Not Assigned" },
+    { label: "Closed By:", val: ticket.closedBy ? `${ticket.closedBy.firstName || ""} ${ticket.closedBy.lastName || ""}`.trim() : "-" },
+    { label: "Rejected By:", val: ticket.rejectedBy?.email || "-" },
+    { label: "", val: "" }
+  ];
+
+  leftRows.forEach((item, index) => {
+    let yPos = currentY + (index * rowHeight);
+
+    doc.font("Helvetica").fontSize(11).fillColor(TEXT_MUTED).text(item.label, colLeftX, yPos, { width: 70 });
+    doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(item.val, colLeftX + 75, yPos, { width: 160 });
+
+    let rItem = rightRows[index];
+    if (rItem.label) {
+      doc.font("Helvetica").fontSize(11).fillColor(TEXT_MUTED).text(rItem.label, colRightX, yPos, { width: 90 });
+      doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(rItem.val, colRightX + 95, yPos, { width: 145 });
+    }
+  });
+
+  currentY += (leftRows.length * rowHeight) + 25;
+
+  doc.fontSize(13).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+     .text("Observations:", 55, currentY);
+
+  currentY += 20;
+
+  let obs = ticket.observations || "No observations provided.";
+  const hasArabic = /[\u0600-\u06FF]/.test(obs);
+  
+  const boxPadding = 12;
+  const boxWidth = doc.page.width - 110;
+  let textHeight = 0;
+
+  if (hasArabic) {
+    obs = obs.split(' ').reverse().join(' ');
+  }
+
+  doc.fontSize(11).fillColor(TEXT_MAIN);
+  if (hasArabic && fs.existsSync(ARABIC_FONT)) {
+    doc.font("ArabicFont");
+    textHeight = doc.heightOfString(obs, { width: boxWidth - (boxPadding * 2), align: "right" });
+  } else {
+    doc.font("Helvetica");
+    textHeight = doc.heightOfString(obs, { width: boxWidth - (boxPadding * 2), align: "justify" });
+  }
+
+  doc.save();
+  doc.lineWidth(1).strokeColor(BORDER_COLOR).fillColor(BG_LIGHT)
+     .roundedRect(55, currentY, boxWidth, textHeight + (boxPadding * 2), 4)
+     .fillAndStroke();
+  doc.restore();
+
+  if (hasArabic && fs.existsSync(ARABIC_FONT)) {
+    doc.font("ArabicFont").fillColor(TEXT_MAIN)
+       .text(obs, 55 + boxPadding, currentY + boxPadding, { width: boxWidth - (boxPadding * 2), align: "right" });
+  } else {
+    doc.font("Helvetica").fillColor(TEXT_MAIN)
+       .text(obs, 55 + boxPadding, currentY + boxPadding, { width: boxWidth - (boxPadding * 2), align: "justify" });
+  }
+
+  currentY += textHeight + (boxPadding * 2) + 30;
+
+  if (includeMedia && (ticket.ticketImages?.length || ticket.ticketVideos?.length || ticket.ticketVoices?.length)) {
+    
+    if (currentY > doc.page.height - 120) {
+      doc.addPage();
+      currentY = 60;
+    }
+
+    doc.fontSize(13).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+       .text("Media Attachments:", 55, currentY);
+
+    currentY += 22;
+
+    const mediaItems = [];
+    ticket.ticketImages?.forEach((url, i) => mediaItems.push({ label: `Image ${i+1}`, url }));
+    ticket.ticketVideos?.forEach((url, i) => mediaItems.push({ label: `Video ${i+1}`, url }));
+    ticket.ticketVoices?.forEach((url, i) => mediaItems.push({ label: `Voice ${i+1}`, url }));
+
+    let mediaX = 55;
+    const itemWidth = 140;
+    const itemGap = 25;
+
+    const BASE_URL = process.env.BACKEND_URL; 
+
+    mediaItems.forEach((item, i) => {
+      if (mediaX + itemWidth > doc.page.width - 55) {
+        currentY += 25;
+        mediaX = 55;
+      }
+
+      let finalUrl = item.url;
+      if (finalUrl.startsWith('file:///')) {
+        finalUrl = finalUrl.replace('file:///', `${BASE_URL}/`);
+      } else if (finalUrl.startsWith('/')) {
+        finalUrl = `${BASE_URL}${finalUrl}`;
+      } else if (!finalUrl.startsWith('http')) {
+        finalUrl = `${BASE_URL}/${finalUrl}`;
+      }
+
+      doc.fontSize(11).font("Helvetica").fillColor("#0066cc")
+         .text(item.label, mediaX, currentY, { link: finalUrl, underline: true, width: itemWidth });
+
+      mediaX += itemWidth + itemGap;
+    });
+  }
+
+  doc.fontSize(9).fillColor(TEXT_MUTED).font("Helvetica")
+     .text(`Report Generated on: ${new Date().toLocaleDateString("en-GB")}`, 
+           0, doc.page.height - 60, { align: "center", width: doc.page.width });
+
+  doc.end();
+
+  return new Promise(resolve => doc.on("end", () => resolve(Buffer.concat(buffers))));
+};
+
 module.exports = {
   generatePDFReport,
   generateExcelReport,
-};
+  generateSingleTicketPDF,   
+};  
