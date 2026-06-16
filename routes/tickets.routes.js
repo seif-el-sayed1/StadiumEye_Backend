@@ -100,4 +100,12 @@ router
         TicketsController.uploadBeforeAfterImages
     )
 
+router
+    .route("/:id/report")
+    .get(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN, USER, STAFF),
+        TicketsController.generateTicketReport
+    )
+
 module.exports = router;
