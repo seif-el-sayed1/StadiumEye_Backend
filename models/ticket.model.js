@@ -22,7 +22,7 @@ const ticketSchema = new mongoose.Schema({
     ticketType: {
         type: String,
         enum: TICKET_TYPES,
-        required: true
+        // required: true
     },
     status: {
         type: String,

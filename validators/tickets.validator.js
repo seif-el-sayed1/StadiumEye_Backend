@@ -13,7 +13,7 @@ class TicketsValidator {
             createdBy: Joi.custom(objectIdValidator).required(),
             stadium: Joi.custom(objectIdValidator).required(),
             area: Joi.string().valid(...STADIUM_AREA).required(),
-            ticketType: Joi.string().valid(...TICKET_TYPES).required(),
+            // ticketType: Joi.string().valid(...TICKET_TYPES).required(),
 
             // Determines whether the ticket is created via AI detection or manual user input
             mode: Joi.string().valid("manual", "ai").required(),
@@ -25,8 +25,7 @@ class TicketsValidator {
                 otherwise: Joi.optional(),
             }),
 
-            challenges: Joi.string().optional(),
-            lessonsLearned: Joi.string().optional(),
+            // challenges: Joi.string().optional(),
 
             ticketVideos: Joi.array().items(Joi.string()).optional(),
             ticketImages: Joi.array().items(Joi.string()).optional(),
@@ -65,10 +64,10 @@ class TicketsValidator {
     updateTicketValidator = asyncHandler(async (req, res, next) => {
         const schema = Joi.object({
             area: Joi.string().valid(...STADIUM_AREA).optional(),
-            ticketType: Joi.string().valid(...TICKET_TYPES).optional(),
+            // ticketType: Joi.string().valid(...TICKET_TYPES).optional(),
             observations: Joi.string().optional(),
-            challenges: Joi.string().optional(),
-            lessonsLearned: Joi.string().optional(),
+            // challenges: Joi.string().optional(),
+            // lessonsLearned: Joi.string().optional(),
             ticketVideos: Joi.array().items(Joi.string().uri()).optional(),
             ticketImages: Joi.array().items(Joi.string().uri()).optional(),
             ticketVoices: Joi.array().items(Joi.string().uri()).optional(),
