@@ -460,27 +460,33 @@ class TicketsController {
     //@route Patch /tickets/:id/before-after
     //@access Private
     uploadBeforeAfterImages = asyncHandler(async (req, res, next) => {
-        console.log("RECEIVED BODY:", JSON.stringify(req.body, null, 2));
         const { id } = req.params;
         const ticket = await Tickets.findById(id);
-
         if (!ticket) return next(new ApiError("Ticket not found", 404));
 
-        if (
-            !req.body.beforeImages ||
-            !req.body.afterImages
-        ) {
-            return next(new ApiError("Before and After images are required", 400));
+        // After images come from uploaded files
+        const afterImages = (req.files || [])
+            .filter(f => f.fieldname === "afterImages")
+            .map(f => `/uploads/images/${f.filename}`);
+
+        if (!afterImages.length) {
+            return next(new ApiError("After images are required", 400));
         }
 
-        ticket.beforeAfterImages.before = req.body.beforeImages;
-        ticket.beforeAfterImages.after = req.body.afterImages;
+        // Before images come as strings from req.body (existing ticket image URLs)
+        const beforeImages = req.body.beforeImages
+            ? Array.isArray(req.body.beforeImages)
+            ? req.body.beforeImages
+            : [req.body.beforeImages]
+            : ticket.ticketImages || [];
 
+        ticket.beforeAfterImages.before = beforeImages;
+        ticket.beforeAfterImages.after = afterImages;
         await ticket.save();
 
         res.json({
             status: "success",
-            message: `Images uploaded successfully`,
+            message: "Images uploaded successfully",
             ticket
         });
     });
