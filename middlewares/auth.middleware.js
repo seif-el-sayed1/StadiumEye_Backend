@@ -7,7 +7,7 @@ const ApiError = require("../utils/ApiError");
 const { translate } = require("../utils/translation");
 
 // Constants
-const { ADMIN, STAFF, USER, ROLES } = require("../utils/constants");
+const { ADMIN, STAFF, USER, MANAGER, ROLES } = require("../utils/constants");
 
 // === Check user authentication and authorization function ===
 const checkUser = async (Model, token, decoded, next) => {
@@ -86,6 +86,11 @@ exports.protect = asyncHandler(async (req, res, next) => {
     case USER:
       currentUser = await checkUser(User, token, decoded, next);
       req.role = USER;
+      req.userId = decoded.userId;
+      break;
+    case MANAGER:
+      currentUser = await checkUser(User, token, decoded, next);
+      req.role = MANAGER;
       req.userId = decoded.userId;
       break;
   }
