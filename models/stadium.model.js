@@ -9,14 +9,9 @@ const stadiumSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "City",
     },
-    supervisorName: {
-        type: String,
-    },
-    supervisorPhone: {
-        type: String,
-    },
-    supervisorEmail: {
-        type: String,
+    manager: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
     },
     stadiumImages: {
         type: [String],
