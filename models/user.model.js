@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const {
   USER,
   STAFF,
+  MANAGER,
   LOGIN_TYPE_LIST,
 } = require("../utils/constants");
 const capitalizeFirstLetter = require("../utils/capitalizeFirstLetter");
@@ -28,7 +29,7 @@ const userSchema = mongoose.Schema(
     },
     role: {
       type: String,
-      enum: [USER, STAFF],
+      enum: [USER, STAFF, MANAGER],
       default: USER
     },
     lastName: {
