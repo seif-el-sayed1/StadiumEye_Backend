@@ -69,6 +69,37 @@ class UserController {
         }
       }
 
+      if (user.role === "manager" && !user.isVerified) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+          const manager = await User.findOne({ email: user.email }).session(session);
+          if (!manager) {
+            throw new Error("Manager not found");
+          }
+
+          const passwordVerificationToken = await manager.generatePasswordVerificationToken(session);
+
+          await manager.save({ session });
+
+          await EmailController.passwordCreateEmail(passwordVerificationToken, user.email);
+
+          await session.commitTransaction();
+          session.endSession();
+
+          return res.status(200).json({
+            success: true,
+            message: "A verification password mail has been sent to your email address",
+          });
+
+        } catch (err) {
+          await session.abortTransaction();
+          session.endSession();
+          next(err);
+        }
+      }
+
 
       if (loginType && loginType !== user.loginType)
           return next(new ApiError(translate("Incorrect Email/Phone or password", lang), 403));
