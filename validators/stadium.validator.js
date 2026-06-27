@@ -1,12 +1,14 @@
 const Joi = require("joi");
 const joiErrorHandler = require("./joiErrorHandler.js");
 const { objectIdValidator } = require("./validatorComponents.js");
+const {  MANAGER } = require("../utils/constants");
 const { SERVICES_LIST } = require("../utils/constants");
 const { phoneNumberValidator } = require("./validatorComponents.js");
 const extractLatLong = require("../utils/extractCoordinates.js");
+const User = require("../models/user.model.js");
 
 class StadiumValidator {
-    addStadiumValidator(req, res, next) {
+    async addStadiumValidator(req, res, next) {
         let { locationLink } = req.body;
 
         if (!locationLink) {
@@ -27,18 +29,9 @@ class StadiumValidator {
         const schema = Joi.object({
             stadiumName: Joi.string().required(),
             city: Joi.string().custom(objectIdValidator).required(),
-            supervisorName: Joi.string().required(),
-            supervisorPhone: Joi.string()
-                .custom(phoneNumberValidator)
-                .required()
-                .messages({
-                    "any.required": "Phone is required",
-                    "string.pattern.base": "Invalid Phone Number"
-                }),
             services: Joi.array()
             .items(Joi.string().valid(...SERVICES_LIST))
             .required(),
-            supervisorEmail: Joi.string().email().required(),
             stadiumImages: Joi.array().items(Joi.string()).optional(),
             capacity: Joi.number().positive().required(),
             positives: Joi.array().items(Joi.string()).required(),
@@ -64,8 +57,8 @@ class StadiumValidator {
         next();
     }
 
-    updateStadiumValidator(req, res, next) {
-        let { locationLink } = req.body;
+    async updateStadiumValidator(req, res, next) {
+        let { locationLink, manager } = req.body; 
         let latLong = null;
 
         if (locationLink) {
@@ -80,6 +73,7 @@ class StadiumValidator {
 
         const schema = Joi.object({
             stadiumName: Joi.string().optional(),
+            manager: Joi.string().custom(objectIdValidator).optional(),
             city: Joi.string().custom(objectIdValidator).optional(),
             stadiumImages: Joi.array().items(Joi.string().uri()).optional(),
             isActive: Joi.boolean().optional(),
@@ -97,6 +91,16 @@ class StadiumValidator {
         });
 
         joiErrorHandler(schema, req);
+
+        if (manager) {
+            const managerUser = await User.findById(manager); 
+            if (!managerUser || managerUser.role !== MANAGER) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Manager not found"
+                });
+            }
+        }
 
         if (locationLink && latLong) {
             req.body.location = {
