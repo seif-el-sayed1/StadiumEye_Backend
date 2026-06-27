@@ -76,6 +76,43 @@ class ManagerController {
         });
     });
 
+    //@desc get all managers
+    //@route GET /managers
+    //@access Private
+    getAllManagers = asyncHandler(async (req, res, next) => {
+        const features = new ApiFeatures(User.find({ role: MANAGER }).select("firstName lastName email isVerified isActive"), req.query, "User")
+            .search()
+            .filter()
+            .sort()
+            .paginate()
+            .cleanResponse();
+
+        const managers = await features.query; 
+
+        res.status(200).json({
+            success: true,
+            totalResults: managers.length,
+            pagination: {
+                page: Number(req.query.page) || 1,
+                limit: Number(req.query.limit) || 20,
+            },
+            managers
+        });
+    })
+
+    //@desc get manager by id
+    //@route GET /managers/:id
+    //@access Private
+    getManagerById = asyncHandler(async (req, res, next) => {
+        const manager = await User.findById(req.params.id).select("firstName lastName email isVerified isActive");
+        if (!manager) return next(new ApiError(`No manager found for this id ${req.params.id}`, 404));
+        res.status(200).json({
+            success: true,
+            manager
+        });
+    })
+
+
 }
 
 module.exports = new ManagerController();
