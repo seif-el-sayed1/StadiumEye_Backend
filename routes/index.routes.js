@@ -10,6 +10,7 @@ let userAuthRoutes = require("./userAuth.routes")
 let stadiumRoutes = require("./stadium.routes");
 let ticketRoutes = require("./tickets.routes");
 let staffRoutes  = require("./staff.routes");
+let managerRoutes = require("./manager.routes");
 let teamRoutes = require("./team.routes");
 let userRoutes = require("./user.routes");
 
@@ -24,9 +25,9 @@ appRouter.use(`${BASE_URL}/cities`, cityRoutes);
 appRouter.use(`${BASE_URL}/stadiums`, stadiumRoutes);
 appRouter.use(`${BASE_URL}/tickets`, ticketRoutes);
 appRouter.use(`${BASE_URL}/staff`, staffRoutes);
+appRouter.use(`${BASE_URL}/managers`, managerRoutes);
 appRouter.use(`${BASE_URL}/teams`, teamRoutes);
 appRouter.use(`${BASE_URL}/users`, userRoutes);
-
 
 
 appRouter.get("/", (req, res) => {
