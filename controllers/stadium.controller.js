@@ -51,9 +51,13 @@ class StadiumController {
     //@route GET /stadiums
     //@access Public
     getAllStadiums = asyncHandler(async (req, res, next) => {
-        const features = new ApiFeatures(
+      const features = new ApiFeatures(
             Stadium.find()
-                .populate("city"), 
+                .populate("city")
+                .populate({
+                    path: "manager",
+                    select: "firstName lastName email phone isVerified",
+                }),
             req.query,
             "Stadium"
         )
@@ -81,8 +85,13 @@ class StadiumController {
     getSingleStadium = asyncHandler(async (req, res, next) => {
         const { id } = req.params;
 
-        const stadium = await Stadium.findById(id).select("-__v -createdAt -updatedAt")
-            .populate("city", "nameEn nameAr");
+        const stadium = await Stadium.findById(id)
+            .select("-__v -createdAt -updatedAt")
+            .populate("city")
+            .populate({
+                path: "manager",
+                select: "firstName lastName email phone isVerified",
+            });
 
         if (!stadium) {
             return next(new ApiError(`No stadium found for this id ${id}`, 404));
