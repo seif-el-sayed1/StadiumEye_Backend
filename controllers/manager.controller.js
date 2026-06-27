@@ -112,6 +112,47 @@ class ManagerController {
         });
     })
 
+    //@desc update manager by id
+    //@route PATCH /managers/:id
+    //@access Private
+    updateManagerById = asyncHandler(async (req, res, next) => {
+        const manager = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!manager) return next(new ApiError(`No manager found for this id ${req.params.id}`, 404));
+        res.status(200).json({
+            success: true,
+            message: "Manager updated successfully",
+            manager
+        });
+    })
+
+    //@desc deactivate Manager by id
+    //@route DELETE /managers/:id
+    //@access Private
+    deactivateManager = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const oldManager = await User.findById(id);
+        if (!oldManager) return next(new ApiError("Manager not found", 404));
+        if (oldManager.isActive === false) return next(new ApiError("Manager already deactivated", 400));
+        const manager = await User.findByIdAndUpdate(
+            id,
+            {
+                isActive: false,
+                deactivatedAt: Date.now(),
+                $unset: {
+                    token: 1,
+                    notificationToken: 1
+                }
+            },
+        );
+        if (!manager) return next(new ApiError("Manager not found", 404));
+        res.status(200).json({
+            status: 'success',
+            data: {
+                manager
+            }
+        });
+    })
+
 
 }
 
