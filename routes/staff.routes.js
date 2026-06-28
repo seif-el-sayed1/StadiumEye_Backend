@@ -28,6 +28,15 @@ router
         StaffController.getAllStaff
     )
 
+
+router
+    .route("/resend-pass-email/:id")
+    .post(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StaffController.resendPasswordEmailToStaff
+    )
+
 router
     .route("/:id")
     .get(

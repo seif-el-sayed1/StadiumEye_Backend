@@ -160,6 +160,23 @@ class StaffController {
             }
         });
     })
+
+    //@desc resend create password email 
+    //@ route POST /managers/resend-email/:id
+    //@access Private
+    resendPasswordEmailToStaff = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const staff = await Staff.findById(id);
+        if (!staff) return next(new ApiError("Staff not found", 404));
+        if (staff.isVerified) return next(new ApiError("Staff is already verified", 400));
+        const passwordVerificationToken = await staff.generatePasswordVerificationToken();
+        await staff.save();
+        await EmailController.passwordCreateEmail(passwordVerificationToken, manager.email);
+        res.status(200).json({
+            success: true,
+            message: "Verification password mail has been resent to his email address"
+        });
+    })
 }
 
 module.exports = new StaffController();
