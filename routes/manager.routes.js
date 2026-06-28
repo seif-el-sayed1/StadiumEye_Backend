@@ -35,6 +35,11 @@ router
         allowedTo(ADMIN, SUPER_ADMIN),
         ManagerController.getManagerById
     )
+    .post(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        ManagerController.activateManager
+    )
     .patch(
         protect, 
         allowedTo(ADMIN, SUPER_ADMIN),

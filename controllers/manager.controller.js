@@ -146,7 +146,23 @@ class ManagerController {
         );
         if (!manager) return next(new ApiError("Manager not found", 404));
         res.status(200).json({
-            status: 'success',
+            success: true,
+            data: {
+                manager
+            }
+        });
+    })
+
+    //@desc activate Manager by id
+    //@route POST /managers/:id
+    //@access Private
+    activateManager = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const manager = await User.findByIdAndUpdate(id, { isActive: true });
+        if (!manager) return next(new ApiError("Manager not found", 404));
+        if (manager.isActive === true) return next(new ApiError("Manager already activated", 400));
+        res.status(200).json({
+            success: true,
             data: {
                 manager
             }
