@@ -169,6 +169,23 @@ class ManagerController {
         });
     })
 
+    //@desc resend create password email 
+    //@ route POST /managers/resnd-email/:id
+    //@access Private
+    resendPasswordEmailToManager = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const manager = await User.findById(id);
+        if (!manager) return next(new ApiError("Manager not found", 404));
+        if (manager.isVerified) return next(new ApiError("Manager is already verified", 400));
+        const passwordVerificationToken = await manager.generatePasswordVerificationToken();
+        await manager.save();
+        await EmailController.passwordCreateEmail(passwordVerificationToken, manager.email);
+        res.status(200).json({
+            success: true,
+            message: "Verification password mail has been resent to his email address"
+        });
+    })
+
 
 }
 

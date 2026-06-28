@@ -29,6 +29,15 @@ router
     )
 
 router
+    .route("/resend-pass-email/:id")
+    .post(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        ManagerController.resendPasswordEmailToManager
+    )
+    
+
+router
     .route("/:id")
     .get(
         protect, 
