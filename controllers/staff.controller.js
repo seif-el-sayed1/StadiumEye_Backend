@@ -133,6 +133,23 @@ class StaffController {
         });
     })
 
+
+    //@desc activate staff by id
+    //@route POST /staff/:id
+    //@access Private
+    activateStaff = asyncHandler(async (req, res, next) => {
+        const { id } = req.params;
+        const staff = await Staff.findByIdAndUpdate(id, { isActive: true });
+        if (!staff) return next(new ApiError("Staff not found", 404));
+        if (staff.isActive === true) return next(new ApiError("Staff already activated", 400));
+        res.status(200).json({
+            success: true,
+            data: {
+                staff
+            }
+        });
+    })
+
     //@desc deactivate Staff
     //@route DELETE /staff/:id
     //@access Private
@@ -162,7 +179,7 @@ class StaffController {
     })
 
     //@desc resend create password email 
-    //@ route POST /managers/resend-email/:id
+    //@ route POST /staff/resend-email/:id
     //@access Private
     resendPasswordEmailToStaff = asyncHandler(async (req, res, next) => {
         const { id } = req.params;
@@ -171,7 +188,7 @@ class StaffController {
         if (staff.isVerified) return next(new ApiError("Staff is already verified", 400));
         const passwordVerificationToken = await staff.generatePasswordVerificationToken();
         await staff.save();
-        await EmailController.passwordCreateEmail(passwordVerificationToken, manager.email);
+        await EmailController.passwordCreateEmail(passwordVerificationToken, staff.email);
         res.status(200).json({
             success: true,
             message: "Verification password mail has been resent to his email address"
