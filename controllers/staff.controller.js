@@ -84,7 +84,7 @@ class StaffController {
     //@route   GET /staff
     //@access  Private (SA)
     getAllStaff = asyncHandler(async (req, res, next) => {
-        const features = new ApiFeatures(Staff.find().select("firstName lastName email team"), req.query, "Team")
+        const features = new ApiFeatures(Staff.find().select("firstName lastName email team isVerified isActive"), req.query, "Team")
             .search()
             .filter()
             .sort()
@@ -108,7 +108,7 @@ class StaffController {
     //@route GET /staff/:id
     //@access Private
     getOneStaff = asyncHandler(async (req, res, next) => {
-        const staff = await Staff.findById(req.params.id).select("firstName lastName email team");
+        const staff = await Staff.findById(req.params.id).select("firstName lastName email team isVerified isActive");
         if (!staff) return next(new ApiError("Staff not found", 404));
         res.status(200).json({
             status: 'success',
