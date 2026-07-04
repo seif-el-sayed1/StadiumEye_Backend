@@ -1,7 +1,7 @@
 const express = require("express");
 
 //constants
-const { ADMIN, SUPER_ADMIN, USER, STAFF } = require("../utils/constants");
+const { ADMIN, SUPER_ADMIN, USER, STAFF, MANAGER } = require("../utils/constants");
 
 
 //middleware
@@ -21,7 +21,7 @@ router
     .route("/")
     .post(
         protect, 
-        allowedTo(USER),
+        allowedTo(USER, STAFF, MANAGER),
         upload.uploadMedia,
         TicketsValidator.addTicketValidator,
         TicketsController.addTicket
@@ -47,7 +47,7 @@ router
         TicketsController.getOneTicket
     ).patch(
         protect, 
-        allowedTo(USER),
+        allowedTo(USER, STAFF, MANAGER),
         TicketsValidator.checkIfTicketIsOpen,
         upload.uploadMedia,
         TicketsValidator.updateTicketValidator,
