@@ -53,7 +53,19 @@ const stadiumSchema = new mongoose.Schema({
         address: String,
         coordinates: {
             type: [Number], //[lng, lat]
-            default: [0, 0]
+            required: [true, "Stadium coordinates are required"],
+            validate: {
+                validator: function (v) {
+                    return (
+                        Array.isArray(v) &&
+                        v.length === 2 &&
+                        !(v[0] === 0 && v[1] === 0) &&
+                        v[0] >= -180 && v[0] <= 180 &&
+                        v[1] >= -90 && v[1] <= 90
+                    );
+                },
+                message: "Invalid or missing coordinates for stadium location."
+            }
         }
     },
     ratingsAverage: {
@@ -72,5 +84,8 @@ const stadiumSchema = new mongoose.Schema({
 
 
 stadiumSchema.index({ stadiumName: 1 });
+stadiumSchema.index({ stadiumName: 1 });
+stadiumSchema.index({ "location.coordinates": "2dsphere" }); 
+
 
 module.exports = mongoose.model("Stadium", stadiumSchema);
