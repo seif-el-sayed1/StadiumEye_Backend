@@ -29,6 +29,7 @@ class StadiumValidator {
         const schema = Joi.object({
             stadiumName: Joi.string().required(),
             city: Joi.string().custom(objectIdValidator).required(),
+            manager: Joi.string().custom(objectIdValidator).required(),
             services: Joi.array()
             .items(Joi.string().valid(...SERVICES_LIST))
             .required(),
