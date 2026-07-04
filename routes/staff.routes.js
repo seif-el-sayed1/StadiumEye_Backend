@@ -44,6 +44,11 @@ router
         allowedTo(ADMIN, SUPER_ADMIN),
         StaffController.getOneStaff
     )
+    .post(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StaffController.activateStaff
+    )
     .patch(
         protect, 
         allowedTo(ADMIN, SUPER_ADMIN),
