@@ -278,6 +278,93 @@ const generatePDFReport = async (filters, options = {}) => {
 
       currentY += textHeight + (boxPadding * 2) + 15;
 
+      if (t.textDetection && (t.textDetection.summary || t.textDetection.extractedText || t.textDetection.classification)) {
+        const td = t.textDetection || {};
+        const cls = td.classification || {};
+
+        if (currentY > doc.page.height - 150) {
+          doc.addPage();
+          currentY = 60;
+        }
+
+        doc.fontSize(11).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+           .text("AI Text Detection:", 55, currentY);
+        currentY += 18;
+
+        const tdLeftRows = [
+          { label: "Status:", val: td.status || "-" },
+          { label: "Category:", val: cls.category || "-" },
+          { label: "Persona:", val: cls.persona || "-" },
+          { label: "Interaction:", val: cls.interaction || "-" }
+        ];
+
+        const tdRightRows = [
+          { label: "Department:", val: cls.department || "-" },
+          { label: "Severity:", val: cls.severity || "-" },
+          { label: "Priority:", val: cls.priority || "-" },
+          { label: "Location:", val: cls.location || "-" }
+        ];
+
+        const tdRowHeight = 18;
+        const tdTotalRows = Math.max(tdLeftRows.length, tdRightRows.length);
+
+        if (currentY + (tdTotalRows * tdRowHeight) > doc.page.height - 100) {
+          doc.addPage();
+          currentY = 60;
+        }
+
+        for (let r = 0; r < tdTotalRows; r++) {
+          let yPos = currentY + (r * tdRowHeight);
+
+          let lItem = tdLeftRows[r];
+          if (lItem) {
+            doc.font("Helvetica").fontSize(10).fillColor(TEXT_MUTED).text(lItem.label, 55, yPos, { width: 70 });
+            doc.font("Helvetica-Bold").fontSize(10).fillColor(TEXT_MAIN).text(lItem.val, 125, yPos, { width: 130 });
+          }
+
+          let rItem = tdRightRows[r];
+          if (rItem) {
+            doc.font("Helvetica").fontSize(10).fillColor(TEXT_MUTED).text(rItem.label, 310, yPos, { width: 70 });
+            doc.font("Helvetica-Bold").fontSize(10).fillColor(TEXT_MAIN).text(rItem.val, 380, yPos, { width: 145 });
+          }
+        }
+
+        currentY += (tdTotalRows * tdRowHeight) + 10;
+
+        if (td.summary) {
+          if (currentY > doc.page.height - 100) {
+            doc.addPage();
+            currentY = 60;
+          }
+          doc.font("Helvetica-Bold").fontSize(10).fillColor(TEXT_MUTED).text("Summary:", 55, currentY, { continued: true });
+          doc.font("Helvetica").fontSize(10).fillColor(TEXT_MAIN).text(` ${td.summary}`, { width: doc.page.width - 130 });
+          currentY = doc.y + 8;
+        }
+
+        if (td.extractedText) {
+          if (currentY > doc.page.height - 100) {
+            doc.addPage();
+            currentY = 60;
+          }
+          const hasArabicExtracted = /[\u0600-\u06FF]/.test(td.extractedText);
+          let extractedDisplay = td.extractedText;
+          if (hasArabicExtracted) extractedDisplay = extractedDisplay.split(' ').reverse().join(' ');
+
+          doc.font("Helvetica-Bold").fontSize(10).fillColor(TEXT_MUTED).text("Extracted Text:", 55, currentY);
+          currentY += 14;
+          if (hasArabicExtracted && fs.existsSync(ARABIC_FONT)) {
+            doc.font("ArabicFont").fontSize(10).fillColor(TEXT_MAIN)
+               .text(extractedDisplay, 55, currentY, { width: doc.page.width - 110, align: "right" });
+          } else {
+            doc.font("Helvetica").fontSize(10).fillColor(TEXT_MAIN)
+               .text(extractedDisplay, 55, currentY, { width: doc.page.width - 110, align: "justify" });
+          }
+          currentY = doc.y + 10;
+        }
+
+        currentY += 5;
+      }
+
       if (includeMedia && (t.ticketImages?.length || t.ticketVideos?.length || t.ticketVoices?.length)) {
         if (currentY > doc.page.height - 100) {
           doc.addPage();
@@ -389,7 +476,10 @@ const generateExcelReport = async (filters) => {
 
   const columns = [
     "Stadium", "Created By (Email)", "Date & Time", "Area", "Type",
-    "Status", "Priority", "Assigned To", "Closed By", "Rejected By", "Observations"
+    "Status", "Priority", "Assigned To", "Closed By", "Rejected By", "Observations",
+    "Detection Status", "Detection Category", "Detection Persona", "Detection Interaction",
+    "Detection Department", "Detection Severity", "Detection Priority", "Detection Location",
+    "Detection Summary", "Extracted Text"
   ];
 
   let mediaColIndex = -1;
@@ -400,7 +490,10 @@ const generateExcelReport = async (filters) => {
 
   columns.forEach((col, i) => ws.cell(1, i + 1).string(col).style(headerStyle));
 
-  const colWidths = [28, 28, 22, 18, 16, 16, 14, 20, 22, 22, 60];
+  const colWidths = [
+    28, 28, 22, 18, 16, 16, 14, 20, 22, 22, 60,
+    16, 18, 16, 18, 18, 14, 14, 18, 40, 40
+  ];
   if (includeMedia) colWidths.push(85);
 
   colWidths.forEach((w, i) => {
@@ -448,7 +541,17 @@ const generateExcelReport = async (filters) => {
       t.assignedTo?.teamName || "Not Assigned",
       t.closedBy ? `${t.closedBy.email || ""}`.trim() || "-" : "-",
       t.rejectedBy?.email || "-",
-      t.observations || "No observations provided."
+      t.observations || "No observations provided.",
+      t.textDetection?.status || "-",
+      t.textDetection?.classification?.category || "-",
+      t.textDetection?.classification?.persona || "-",
+      t.textDetection?.classification?.interaction || "-",
+      t.textDetection?.classification?.department || "-",
+      t.textDetection?.classification?.severity || "-",
+      t.textDetection?.classification?.priority || "-",
+      t.textDetection?.classification?.location || "-",
+      t.textDetection?.summary || "-",
+      t.textDetection?.extractedText || "-"
     ];
 
     baseRow.forEach((val, i) => ws.cell(row, i + 1).string(val || "-"));
@@ -648,6 +751,93 @@ const generateSingleTicketPDF = async (ticket, options = {}) => {
 
   currentY += textHeight + (boxPadding * 2) + 30;
 
+  if (ticket.textDetection && (ticket.textDetection.summary || ticket.textDetection.extractedText || ticket.textDetection.classification)) {
+    const td = ticket.textDetection || {};
+    const cls = td.classification || {};
+
+    if (currentY > doc.page.height - 150) {
+      doc.addPage();
+      currentY = 60;
+    }
+
+    doc.fontSize(13).fillColor(PRIMARY_COLOR).font("Helvetica-Bold")
+       .text("AI Text Detection:", 55, currentY);
+    currentY += 22;
+
+    const tdLeftRows = [
+      { label: "Status:", val: td.status || "-" },
+      { label: "Category:", val: cls.category || "-" },
+      { label: "Persona:", val: cls.persona || "-" },
+      { label: "Interaction:", val: cls.interaction || "-" }
+    ];
+
+    const tdRightRows = [
+      { label: "Department:", val: cls.department || "-" },
+      { label: "Severity:", val: cls.severity || "-" },
+      { label: "Priority:", val: cls.priority || "-" },
+      { label: "Location:", val: cls.location || "-" }
+    ];
+
+    const tdRowHeight = 20;
+    const tdTotalRows = Math.max(tdLeftRows.length, tdRightRows.length);
+
+    if (currentY + (tdTotalRows * tdRowHeight) > doc.page.height - 100) {
+      doc.addPage();
+      currentY = 60;
+    }
+
+    for (let r = 0; r < tdTotalRows; r++) {
+      let yPos = currentY + (r * tdRowHeight);
+
+      let lItem = tdLeftRows[r];
+      if (lItem) {
+        doc.font("Helvetica").fontSize(11).fillColor(TEXT_MUTED).text(lItem.label, colLeftX, yPos, { width: 75 });
+        doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(lItem.val, colLeftX + 80, yPos, { width: 155 });
+      }
+
+      let rItem = tdRightRows[r];
+      if (rItem) {
+        doc.font("Helvetica").fontSize(11).fillColor(TEXT_MUTED).text(rItem.label, colRightX, yPos, { width: 90 });
+        doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(rItem.val, colRightX + 95, yPos, { width: 145 });
+      }
+    }
+
+    currentY += (tdTotalRows * tdRowHeight) + 15;
+
+    if (td.summary) {
+      if (currentY > doc.page.height - 100) {
+        doc.addPage();
+        currentY = 60;
+      }
+      doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_MUTED).text("Summary:", 55, currentY, { continued: true });
+      doc.font("Helvetica").fillColor(TEXT_MAIN).text(` ${td.summary}`, { width: doc.page.width - 130 });
+      currentY = doc.y + 12;
+    }
+
+    if (td.extractedText) {
+      if (currentY > doc.page.height - 100) {
+        doc.addPage();
+        currentY = 60;
+      }
+      const hasArabicExtracted = /[\u0600-\u06FF]/.test(td.extractedText);
+      let extractedDisplay = td.extractedText;
+      if (hasArabicExtracted) extractedDisplay = extractedDisplay.split(' ').reverse().join(' ');
+
+      doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_MUTED).text("Extracted Text:", 55, currentY);
+      currentY += 16;
+      if (hasArabicExtracted && fs.existsSync(ARABIC_FONT)) {
+        doc.font("ArabicFont").fontSize(11).fillColor(TEXT_MAIN)
+           .text(extractedDisplay, 55, currentY, { width: doc.page.width - 110, align: "right" });
+      } else {
+        doc.font("Helvetica").fontSize(11).fillColor(TEXT_MAIN)
+           .text(extractedDisplay, 55, currentY, { width: doc.page.width - 110, align: "justify" });
+      }
+      currentY = doc.y + 15;
+    }
+
+    currentY += 10;
+  }
+
   if (includeMedia && (ticket.ticketImages?.length || ticket.ticketVideos?.length || ticket.ticketVoices?.length)) {
     
     if (currentY > doc.page.height - 120) {
@@ -706,4 +896,4 @@ module.exports = {
   generatePDFReport,
   generateExcelReport,
   generateSingleTicketPDF,   
-};  
+};
