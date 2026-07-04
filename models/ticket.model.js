@@ -76,8 +76,6 @@ const ticketSchema = new mongoose.Schema({
         ticketId: { type: String },
         status: {
             type: String,
-            enum: ["pending", "processing", "completed", "failed"],
-            default: "pending"
         },
         error: { type: String, default: null },
         classification: {
