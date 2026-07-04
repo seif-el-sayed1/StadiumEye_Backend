@@ -66,6 +66,28 @@ const userSchema = mongoose.Schema(
       type: String,
       minLength: [6, "Too short password"],
     },
+    lastNextMatch: {
+      stadium: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Stadium"
+      },
+      venueId: {
+        type: Number
+      },
+      match: {
+        teams: {
+          homeTeam:{
+            type: String
+          }, 
+          awayTeam:{
+            type: String
+          },
+          time: {
+            type: Date
+          }
+        }
+      }
+    },
     passwordChangedAt: Date,
     passwordResetCode: String,
     passwordResetCodeExp: Date,
