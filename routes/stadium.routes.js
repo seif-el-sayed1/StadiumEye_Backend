@@ -1,7 +1,7 @@
 const express = require("express");
 
 // Constants
-const { SUPER_ADMIN, ADMIN } = require("../utils/constants");
+const { SUPER_ADMIN, ADMIN, USER } = require("../utils/constants");
 
 //middleware
 const { protect, allowedTo } = require("../middlewares/auth.middleware");
@@ -41,6 +41,13 @@ router
         protect,
         allowedTo(ADMIN, SUPER_ADMIN),
         StadiumController.exportReport
+    )
+
+router.route("/next-match")
+    .post(
+        protect,
+        allowedTo(USER),
+        StadiumController.getNextMatch
     )
 
 router
