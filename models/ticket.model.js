@@ -63,11 +63,6 @@ const ticketSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    visibility: {
-        type: String,
-        enum: ["public", "private"],
-        default: "publi c"
-    },  
     beforeAfterImages: {
         before: [String],
         after: [String],

@@ -448,24 +448,6 @@ class TicketsController {
         })
     })
 
-    //@desc Toggle Visibility
-    //@route Patch /tickets/:id/visibility
-    //@access Private
-    changeVisibility = asyncHandler(async (req, res, next) => {
-        const { id } = req.params
-        const ticket = await Tickets.findById(id);
-        if (!ticket) return next(new ApiError("Ticket not found", 404));
-        if (ticket.visibility === req.body.visibility) return next(new ApiError(`Ticket is already ${ticket.visibility}`, 400));
-        
-        ticket.visibility = req.body.visibility;
-        await ticket.save();
-        res.json({
-            status: "success",
-            message: `Ticket visibility changed to ${ticket.visibility} successfully`,
-            ticket
-        })
-    })
-
     //@decs Upload Before and After Images
     //@route Patch /tickets/:id/before-after
     //@access Private

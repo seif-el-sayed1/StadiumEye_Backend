@@ -82,14 +82,6 @@ router
         TicketsController.choosePriority
     )
 
-router 
-    .route("/:id/visibility")
-    .patch(
-        protect, 
-        allowedTo(ADMIN, SUPER_ADMIN, USER, STAFF),
-        TicketsController.changeVisibility
-    )
-
 router
     .route("/:id/before-after")
     .patch(
