@@ -46,7 +46,6 @@ const ticketSchema = new mongoose.Schema({
     priority: {
         type: String,
         enum: TICKET_PRIORITIES,
-        default: "medium"
     },
     assignedBy: {
         type: mongoose.Schema.Types.ObjectId,
@@ -67,11 +66,31 @@ const ticketSchema = new mongoose.Schema({
     visibility: {
         type: String,
         enum: ["public", "private"],
-        default: "public"
+        default: "publi c"
     },  
     beforeAfterImages: {
         before: [String],
         after: [String],
+    },
+    textDetection: {
+        ticketId: { type: String },
+        status: {
+            type: String,
+            enum: ["pending", "processing", "completed", "failed"],
+            default: "pending"
+        },
+        error: { type: String, default: null },
+        classification: {
+            category: { type: String },
+            persona: { type: String },
+            interaction: { type: String },
+            department: { type: String },
+            severity: { type: String },
+            priority: { type: String},
+            location: { type: String }
+        },
+        summary: { type: String },
+        extractedText: { type: String }
     },
     ticketDetections: {
         type: [
