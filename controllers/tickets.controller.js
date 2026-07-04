@@ -12,6 +12,7 @@ const Stadium = require("../models/stadium.model");
 const EmailController = require("./email.controller");
 const { generateSingleTicketPDF } = require("../utils/generateReports");
 const  processDetections  = require("../utils/processDetections");
+const { runReportAgent, mapTextDetectionResult } = require("../utils/reportAgent");
 
 const deleteLocalFile = (filePath) => {
     const fullPath = path.join(__dirname, "..", filePath);
@@ -39,7 +40,6 @@ class TicketsController {
             const ticketVideos = [];
             const ticketVoices = [];
 
-            // Categorize uploaded files by MIME type into separate arrays
             if (req.files && req.files.length > 0) {
                 req.files.forEach((file) => {
                     if (file.mimetype.startsWith("image"))
@@ -51,12 +51,13 @@ class TicketsController {
                 });
             }
 
-            const { mode, modelType, ...ticketData } = req.body;
+            const { mode, modelType, observation, ...ticketData } = req.body;
 
             if (ticketImages.length > 0) ticketData.ticketImages = ticketImages;
             if (ticketVideos.length > 0) ticketData.ticketVideos = ticketVideos;
             if (ticketVoices.length > 0) ticketData.ticketVoices = ticketVoices;
             ticketData.mode = mode;
+            if (observation) ticketData.observation = observation;
 
             const [ticket] = await Tickets.create([ticketData], { session });
 
@@ -65,7 +66,34 @@ class TicketsController {
                 { path: "createdBy", select: "firstName lastName email" }
             ]);
 
-            // AI Detection Mode Only runs if the user chose AI mode and skipped entirely for manual mode
+            // Report Agent 
+            try {
+                let agentResult = null;
+
+                if (observation) {
+                    agentResult = await runReportAgent("text", observation);
+                } else if (ticketVoices.length > 0) {
+                    const absVoicePath = `/var/www/StadiumEye/StadiumEye_Backend-main${ticketVoices[0]}`;
+                    agentResult = await runReportAgent("audio", absVoicePath);
+                } else if (ticketImages.length > 0) {
+                    const absImagePath = `/var/www/StadiumEye/StadiumEye_Backend-main${ticketImages[0]}`;
+                    agentResult = await runReportAgent("image", absImagePath);
+                }
+
+                if (agentResult) {
+                    const mappedResult = mapTextDetectionResult(agentResult);
+                    if (mappedResult) {
+                        await Tickets.findByIdAndUpdate(
+                            ticket._id,
+                            { $set: { textDetection: mappedResult } },
+                            { session }
+                        );
+                    }
+                }
+            } catch (agentErr) {
+                console.error("reportAgent failed:", agentErr.message);
+            }
+
             if (mode === "ai") {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
 
@@ -82,7 +110,6 @@ class TicketsController {
                             ? rawDetections.detections
                             : [];
 
-                    // If AI returned no detections, abort the entire transaction (the ticket will NOT be saved to the DB)
                     if (detections.length === 0) {
                         await session.abortTransaction();
                         session.endSession();
@@ -132,7 +159,6 @@ class TicketsController {
             await session.commitTransaction();
             session.endSession();
 
-            // send emails to admins and user
             const admins = await Admin.find().select("email");
             for (const admin of admins) {
                 await EmailController.reportEmailToAdmin(admin.email, ticket);
