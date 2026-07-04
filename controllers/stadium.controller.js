@@ -7,6 +7,8 @@ const { generatePDFReport, generateExcelReport } = require("../utils/generateRep
 const Stadium = require("../models/stadium.model");
 const User = require("../models/user.model");
 const Ticket = require("../models/ticket.model");
+const extractLatLong = require("../utils/extractCoordinates.js");
+const { findVenueByName, findFixtureByVenueAndDate } = require("../utils/footballApi");
 
 const deleteLocalFile = (filePath) => {
     const fullPath = path.join(__dirname, "..", filePath);
@@ -351,6 +353,64 @@ class StadiumController {
         res.setHeader("Content-Type", contentType);
         res.send(buffer);
     });
+
+    //@desc get next match in the nearest stadium depend on user location 
+    //@route POST /stadiums/next-match
+    //@access Private
+    getNextMatch = asyncHandler(async (req, res, next) => {
+        const { location } = req.body;
+        const userId = req.user._id;
+
+        const latLong = extractLatLong(location);
+        if (!latLong) {
+            return next(new ApiError("Invalid location format. Please provide a valid Google Maps link.", 400));
+        }
+
+        const nearestStadium = await getNearestStadium(latLong);
+        if (!nearestStadium) {
+            return next(new ApiError("No stadiums found near your location.", 404));
+        }
+
+        const venue = await findVenueByName(nearestStadium.stadiumName);
+        if (!venue) {
+            return next(new ApiError("No stadiums found.", 404));
+        }
+
+        const today = new Date().toISOString().split("T")[0];
+        const fixture = await findFixtureByVenueAndDate(venue.id, today);
+        if (!fixture) {
+            return next(new ApiError("No matches found today at this stadium.", 404));
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            {
+                lastNextMatch: {
+                    stadium: nearestStadium._id,
+                    venueId: venue.id,
+                    match: {
+                        teams: {
+                            homeTeam: fixture.teams.home.name,
+                            awayTeam: fixture.teams.away.name,
+                            time: fixture.fixture.date
+                        }
+                    }
+                }
+            },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            status: "success",
+            data: {
+                stadium: nearestStadium,
+                venue,
+                fixture,
+                savedUser: user.lastNextMatch
+            }
+        });
+    });
+
 }
 
 module.exports = new StadiumController();
