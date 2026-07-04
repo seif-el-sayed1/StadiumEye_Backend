@@ -35,6 +35,7 @@ class TicketsController {
         const session = await mongoose.startSession();
         session.startTransaction();
 
+        let ticket;
         try {
             const ticketImages = [];
             const ticketVideos = [];
@@ -59,17 +60,15 @@ class TicketsController {
             ticketData.mode = mode;
             if (observation) ticketData.observation = observation;
 
-            const [ticket] = await Tickets.create([ticketData], { session });
+            [ticket] = await Tickets.create([ticketData], { session });
 
             await ticket.populate([
                 { path: "stadium", select: "stadiumName" },
                 { path: "createdBy", select: "firstName lastName email" }
             ]);
 
-            // Report Agent 
             try {
                 let agentResult = null;
-
                 if (observation) {
                     agentResult = await runReportAgent("text", observation);
                 } else if (ticketVoices.length > 0) {
@@ -98,25 +97,11 @@ class TicketsController {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
 
                 for (const imgUrl of ticketImages) {
-                    const rawDetections = await processDetections(
-                        `${baseUrl}${imgUrl}`,
-                        modelType,
-                        "image"
-                    );
-
-                    const detections = Array.isArray(rawDetections)
-                        ? rawDetections
-                        : Array.isArray(rawDetections?.detections)
-                            ? rawDetections.detections
-                            : [];
+                    const rawDetections = await processDetections(`${baseUrl}${imgUrl}`, modelType, "image");
+                    const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
 
                     if (detections.length === 0) {
-                        await session.abortTransaction();
-                        session.endSession();
-                        return res.status(422).json({
-                            status: "error",
-                            message: "AI model did not detect any results. Ticket was not saved. Please try again or switch to manual mode."
-                        });
+                        throw new Error("AI model did not detect any results.");
                     }
 
                     await Tickets.findByIdAndUpdate(
@@ -127,25 +112,11 @@ class TicketsController {
                 }
 
                 for (const vidUrl of ticketVideos) {
-                    const rawDetections = await processDetections(
-                        `${baseUrl}${vidUrl}`,
-                        modelType,
-                        "video"
-                    );
-
-                    const detections = Array.isArray(rawDetections)
-                        ? rawDetections
-                        : Array.isArray(rawDetections?.detections)
-                            ? rawDetections.detections
-                            : [];
+                    const rawDetections = await processDetections(`${baseUrl}${vidUrl}`, modelType, "video");
+                    const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
 
                     if (detections.length === 0) {
-                        await session.abortTransaction();
-                        session.endSession();
-                        return res.status(422).json({
-                            status: "error",
-                            message: "AI model did not detect any results. Ticket was not saved. Please try again or switch to manual mode."
-                        });
+                        throw new Error("AI model did not detect any results.");
                     }
 
                     await Tickets.findByIdAndUpdate(
@@ -159,20 +130,33 @@ class TicketsController {
             await session.commitTransaction();
             session.endSession();
 
+        } catch (error) {
+            if (session.inTransaction()) {
+                await session.abortTransaction();
+            }
+            session.endSession();
+            
+            if (error.message === "AI model did not detect any results.") {
+                return res.status(422).json({
+                    status: "error",
+                    message: "AI model did not detect any results. Ticket was not saved. Please try again or switch to manual mode."
+                });
+            }
+            return next(error);
+        }
+
+        try {
             const admins = await Admin.find().select("email");
             for (const admin of admins) {
                 await EmailController.reportEmailToAdmin(admin.email, ticket);
             }
             await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
-
-            const populatedTicket = await Tickets.findById(ticket._id);
-            res.status(201).json({ status: "success", data: populatedTicket });
-
-        } catch (error) {
-            await session.abortTransaction();
-            session.endSession();
-            next(error);
+        } catch (emailErr) {
+            console.error("Email notification failed:", emailErr.message);
         }
+
+        const populatedTicket = await Tickets.findById(ticket._id);
+        res.status(201).json({ status: "success", data: populatedTicket });
     });
 
     //@decs  Get All Tickets
