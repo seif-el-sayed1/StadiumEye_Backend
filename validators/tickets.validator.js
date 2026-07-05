@@ -19,11 +19,7 @@ class TicketsValidator {
             mode: Joi.string().valid("manual", "ai").required(),
 
             // Required only in manual mode — in AI mode the AI provides the findings
-            observations: Joi.string().when("mode", {
-                is: "manual",
-                then: Joi.required(),
-                otherwise: Joi.optional(),
-            }),
+            observations: Joi.string().optional(),
 
             // challenges: Joi.string().optional(),
 
