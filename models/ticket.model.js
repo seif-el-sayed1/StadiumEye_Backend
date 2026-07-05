@@ -22,7 +22,6 @@ const ticketSchema = new mongoose.Schema({
     ticketType: {
         type: String,
         enum: TICKET_TYPES,
-        // required: true
     },
     status: {
         type: String,
@@ -36,7 +35,6 @@ const ticketSchema = new mongoose.Schema({
     },
     observations: {
         type: String,
-        required: [true, "Observations are required"]
     },
     challenges: String,
     lessonsLearned: String,
