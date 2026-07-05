@@ -1,4 +1,3 @@
-// utils/reportAgent.js
 const { spawn } = require("child_process");
 
 const PYTHON_BIN = "/var/www/StadiumEye/StadiumEye_Backend-main/venv/bin/python";
@@ -6,16 +5,9 @@ const SCRIPT_PATH = "/var/www/StadiumEye/StadiumEye_Backend-main/reportAgent/tes
 
 const runReportAgent = (type, value) => {
     return new Promise((resolve, reject) => {
-        const flagMap = {
-            text: "--text",
-            audio: "--audio",
-            image: "--image",
-        };
-
+        const flagMap = { text: "--text", audio: "--audio", image: "--image" };
         const flag = flagMap[type];
-        if (!flag) {
-            return reject(new Error(`Unsupported reportAgent type: ${type}`));
-        }
+        if (!flag) return reject(new Error(`Unsupported reportAgent type: ${type}`));
 
         const child = spawn(PYTHON_BIN, [SCRIPT_PATH, flag, value]);
 
@@ -26,9 +18,7 @@ const runReportAgent = (type, value) => {
         child.stderr.on("data", (chunk) => (stderr += chunk.toString()));
 
         child.on("close", (code) => {
-            if (code !== 0) {
-                return reject(new Error(`reportAgent exited with code ${code}: ${stderr}`));
-            }
+            if (code !== 0) return reject(new Error(`reportAgent exited with code ${code}: ${stderr}`));
             try {
                 resolve(JSON.parse(stdout.trim()));
             } catch (err) {
@@ -40,11 +30,13 @@ const runReportAgent = (type, value) => {
     });
 };
 
-const mapTextDetectionResult = (raw) => {
+const mapTextDetectionResult = (raw, sourceType, sourceValue) => {
     const td = raw?.textDetection ?? raw;
     if (!td) return null;
 
     return {
+        sourceType,
+        sourceValue,
         ticketId: td.ticket_id,
         status: td.status,
         error: td.error,
