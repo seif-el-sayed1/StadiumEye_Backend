@@ -67,52 +67,6 @@ class TicketsController {
                 { path: "createdBy", select: "firstName lastName email" }
             ]);
 
-            try {
-                const detectionJobs = [];
-
-                if (observations) {
-                    detectionJobs.push({ type: "text", value: observations });
-                }
-
-                ticketImages.forEach((imgPath) => {
-                    const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${imgPath}`;
-                    detectionJobs.push({ type: "image", value: absPath });
-                });
-
-                ticketVoices.forEach((voicePath) => {
-                    const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${voicePath}`;
-                    detectionJobs.push({ type: "audio", value: absPath });
-                });
-
-                const textDetectionResults = [];
-
-                for (const job of detectionJobs) {
-                    try {
-                        const agentResult = await runReportAgent(job.type, job.value);
-                        const mappedResult = mapTextDetectionResult(agentResult, job.type, job.value);
-                        if (mappedResult) textDetectionResults.push(mappedResult);
-                    } catch (jobErr) {
-                        console.error(`reportAgent failed for ${job.type} (${job.value}):`, jobErr.message);
-                        textDetectionResults.push({
-                            sourceType: job.type,
-                            sourceValue: job.value,
-                            status: "failed",
-                            error: jobErr.message
-                        });
-                    }
-                }
-
-                if (textDetectionResults.length > 0) {
-                    await Tickets.findByIdAndUpdate(
-                        ticket._id,
-                        { $set: { textDetection: textDetectionResults } },
-                        { session }
-                    );
-                }
-            } catch (agentErr) {
-                console.error("reportAgent pipeline failed:", agentErr.message);
-            }
-
             if (mode === "ai") {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
 
@@ -163,6 +117,51 @@ class TicketsController {
                 });
             }
             return next(error);
+        }
+
+        try {
+            const detectionJobs = [];
+
+            if (ticket.observations) {
+                detectionJobs.push({ type: "text", value: ticket.observations });
+            }
+
+            (ticket.ticketImages || []).forEach((imgPath) => {
+                const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${imgPath}`;
+                detectionJobs.push({ type: "image", value: absPath });
+            });
+
+            (ticket.ticketVoices || []).forEach((voicePath) => {
+                const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${voicePath}`;
+                detectionJobs.push({ type: "audio", value: absPath });
+            });
+
+            const textDetectionResults = [];
+
+            for (const job of detectionJobs) {
+                try {
+                    const agentResult = await runReportAgent(job.type, job.value);
+                    const mappedResult = mapTextDetectionResult(agentResult, job.type, job.value);
+                    if (mappedResult) textDetectionResults.push(mappedResult);
+                } catch (jobErr) {
+                    console.error(`reportAgent failed for ${job.type} (${job.value}):`, jobErr.message);
+                    textDetectionResults.push({
+                        sourceType: job.type,
+                        sourceValue: job.value,
+                        status: "failed",
+                        error: jobErr.message
+                    });
+                }
+            }
+
+            if (textDetectionResults.length > 0) {
+                await Tickets.findByIdAndUpdate(
+                    ticket._id,
+                    { $set: { textDetection: textDetectionResults } }
+                );
+            }
+        } catch (agentErr) {
+            console.error("reportAgent pipeline failed:", agentErr.message);
         }
 
         try {
