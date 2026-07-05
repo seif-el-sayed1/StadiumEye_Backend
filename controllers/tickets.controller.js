@@ -52,13 +52,13 @@ class TicketsController {
                 });
             }
 
-            const { mode, modelType, observation, ...ticketData } = req.body;
+            const { mode, modelType, observations, ...ticketData } = req.body;
 
             if (ticketImages.length > 0) ticketData.ticketImages = ticketImages;
             if (ticketVideos.length > 0) ticketData.ticketVideos = ticketVideos;
             if (ticketVoices.length > 0) ticketData.ticketVoices = ticketVoices;
             ticketData.mode = mode;
-            if (observation) ticketData.observation = observation;
+            if (observations) ticketData.observations = observations;
 
             [ticket] = await Tickets.create([ticketData], { session });
 
@@ -68,29 +68,49 @@ class TicketsController {
             ]);
 
             try {
-                let agentResult = null;
-                if (observation) {
-                    agentResult = await runReportAgent("text", observation);
-                } else if (ticketVoices.length > 0) {
-                    const absVoicePath = `/var/www/StadiumEye/StadiumEye_Backend-main${ticketVoices[0]}`;
-                    agentResult = await runReportAgent("audio", absVoicePath);
-                } else if (ticketImages.length > 0) {
-                    const absImagePath = `/var/www/StadiumEye/StadiumEye_Backend-main${ticketImages[0]}`;
-                    agentResult = await runReportAgent("image", absImagePath);
+                const detectionJobs = [];
+
+                if (observations) {
+                    detectionJobs.push({ type: "text", value: observations });
                 }
 
-                if (agentResult) {
-                    const mappedResult = mapTextDetectionResult(agentResult);
-                    if (mappedResult) {
-                        await Tickets.findByIdAndUpdate(
-                            ticket._id,
-                            { $set: { textDetection: mappedResult } },
-                            { session }
-                        );
+                ticketImages.forEach((imgPath) => {
+                    const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${imgPath}`;
+                    detectionJobs.push({ type: "image", value: absPath });
+                });
+
+                ticketVoices.forEach((voicePath) => {
+                    const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${voicePath}`;
+                    detectionJobs.push({ type: "audio", value: absPath });
+                });
+
+                const textDetectionResults = [];
+
+                for (const job of detectionJobs) {
+                    try {
+                        const agentResult = await runReportAgent(job.type, job.value);
+                        const mappedResult = mapTextDetectionResult(agentResult, job.type, job.value);
+                        if (mappedResult) textDetectionResults.push(mappedResult);
+                    } catch (jobErr) {
+                        console.error(`reportAgent failed for ${job.type} (${job.value}):`, jobErr.message);
+                        textDetectionResults.push({
+                            sourceType: job.type,
+                            sourceValue: job.value,
+                            status: "failed",
+                            error: jobErr.message
+                        });
                     }
                 }
+
+                if (textDetectionResults.length > 0) {
+                    await Tickets.findByIdAndUpdate(
+                        ticket._id,
+                        { $set: { textDetection: textDetectionResults } },
+                        { session }
+                    );
+                }
             } catch (agentErr) {
-                console.error("reportAgent failed:", agentErr.message);
+                console.error("reportAgent pipeline failed:", agentErr.message);
             }
 
             if (mode === "ai") {
@@ -135,7 +155,7 @@ class TicketsController {
                 await session.abortTransaction();
             }
             session.endSession();
-            
+
             if (error.message === "AI model did not detect any results.") {
                 return res.status(422).json({
                     status: "error",
