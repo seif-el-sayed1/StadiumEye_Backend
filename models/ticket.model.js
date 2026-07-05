@@ -65,24 +65,36 @@ const ticketSchema = new mongoose.Schema({
         before: [String],
         after: [String],
     },
-    textDetection: {
-        ticketId: { type: String },
-        status: {
-            type: String,
-        },
-        error: { type: String, default: null },
-        classification: {
-            category: { type: String },
-            persona: { type: String },
-            interaction: { type: String },
-            department: { type: String },
-            severity: { type: String },
-            priority: { type: String},
-            location: { type: String }
-        },
-        summary: { type: String },
-        extractedText: { type: String }
-    },
+    textDetection: [
+        {
+            sourceType: {
+                type: String,
+                enum: ["text", "audio", "image"],
+                required: true
+            },
+            sourceValue: {
+                type: String
+            },
+            ticketId: { type: String },
+            status: {
+                type: String,
+                enum: ["pending", "processing", "completed", "failed"],
+                default: "pending"
+            },
+            error: { type: String, default: null },
+            classification: {
+                category: { type: String },
+                persona: { type: String },
+                interaction: { type: String },
+                department: { type: String },
+                severity: { type: String },
+                priority: { type: String },
+                location: { type: String }
+            },
+            summary: { type: String },
+            extractedText: { type: String }
+        }
+    ],
     ticketDetections: {
         type: [
             {
