@@ -32,150 +32,134 @@ class TicketsController {
     //@route POST /tickets
     //@access Public
     addTicket = asyncHandler(async (req, res, next) => {
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        const ticketImages = [];
+        const ticketVideos = [];
+        const ticketVoices = [];
 
-        let ticket;
-        try {
-            const ticketImages = [];
-            const ticketVideos = [];
-            const ticketVoices = [];
+        if (req.files && req.files.length > 0) {
+            req.files.forEach((file) => {
+                if (file.mimetype.startsWith("image"))
+                    ticketImages.push(`/uploads/images/${file.filename}`);
+                if (file.mimetype.startsWith("video"))
+                    ticketVideos.push(`/uploads/videos/${file.filename}`);
+                if (file.mimetype.startsWith("audio"))
+                    ticketVoices.push(`/uploads/voices/${file.filename}`);
+            });
+        }
 
-            if (req.files && req.files.length > 0) {
-                req.files.forEach((file) => {
-                    if (file.mimetype.startsWith("image"))
-                        ticketImages.push(`/uploads/images/${file.filename}`);
-                    if (file.mimetype.startsWith("video"))
-                        ticketVideos.push(`/uploads/videos/${file.filename}`);
-                    if (file.mimetype.startsWith("audio"))
-                        ticketVoices.push(`/uploads/voices/${file.filename}`);
-                });
-            }
+        const { mode, modelType, observations, ...ticketData } = req.body;
 
-            const { mode, modelType, observations, ...ticketData } = req.body;
+        if (ticketImages.length > 0) ticketData.ticketImages = ticketImages;
+        if (ticketVideos.length > 0) ticketData.ticketVideos = ticketVideos;
+        if (ticketVoices.length > 0) ticketData.ticketVoices = ticketVoices;
+        ticketData.mode = mode;
+        if (observations) ticketData.observations = observations;
 
-            if (ticketImages.length > 0) ticketData.ticketImages = ticketImages;
-            if (ticketVideos.length > 0) ticketData.ticketVideos = ticketVideos;
-            if (ticketVoices.length > 0) ticketData.ticketVoices = ticketVoices;
-            ticketData.mode = mode;
-            if (observations) ticketData.observations = observations;
+        const ticket = await Tickets.create(ticketData);
 
-            [ticket] = await Tickets.create([ticketData], { session });
+        await ticket.populate([
+            { path: "stadium", select: "stadiumName" },
+            { path: "createdBy", select: "firstName lastName email" }
+        ]);
 
-            await ticket.populate([
-                { path: "stadium", select: "stadiumName" },
-                { path: "createdBy", select: "firstName lastName email" }
-            ]);
+        res.status(201).json({ status: "success", data: ticket });
+
+        setImmediate(async () => {
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
 
             if (mode === "ai") {
-                const baseUrl = `${req.protocol}://${req.get("host")}`;
-
                 for (const imgUrl of ticketImages) {
-                    const rawDetections = await processDetections(`${baseUrl}${imgUrl}`, modelType, "image");
-                    const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
+                    try {
+                        const rawDetections = await processDetections(`${baseUrl}${imgUrl}`, modelType, "image");
+                        const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
 
-                    if (detections.length === 0) {
-                        throw new Error("AI model did not detect any results.");
+                        if (detections.length > 0) {
+                            await Tickets.findByIdAndUpdate(
+                                ticket._id,
+                                { $push: { ticketDetections: { url: imgUrl, type: "image", modelType, detections } } }
+                            );
+                        } else {
+                            console.error(`No detections found for image: ${imgUrl}`);
+                        }
+                    } catch (err) {
+                        console.error(`AI detection failed for image ${imgUrl}:`, err.message);
                     }
-
-                    await Tickets.findByIdAndUpdate(
-                        ticket._id,
-                        { $push: { ticketDetections: { url: imgUrl, type: "image", modelType, detections } } },
-                        { session }
-                    );
                 }
 
                 for (const vidUrl of ticketVideos) {
-                    const rawDetections = await processDetections(`${baseUrl}${vidUrl}`, modelType, "video");
-                    const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
+                    try {
+                        const rawDetections = await processDetections(`${baseUrl}${vidUrl}`, modelType, "video");
+                        const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
 
-                    if (detections.length === 0) {
-                        throw new Error("AI model did not detect any results.");
+                        if (detections.length > 0) {
+                            await Tickets.findByIdAndUpdate(
+                                ticket._id,
+                                { $push: { ticketDetections: { url: vidUrl, type: "video", modelType, detections } } }
+                            );
+                        } else {
+                            console.error(`No detections found for video: ${vidUrl}`);
+                        }
+                    } catch (err) {
+                        console.error(`AI detection failed for video ${vidUrl}:`, err.message);
                     }
+                }
+            }
 
+            try {
+                const detectionJobs = [];
+
+                if (observations) {
+                    detectionJobs.push({ type: "text", value: observations });
+                }
+
+                ticketImages.forEach((imgPath) => {
+                    const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${imgPath}`;
+                    detectionJobs.push({ type: "image", value: absPath });
+                });
+
+                ticketVoices.forEach((voicePath) => {
+                    const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${voicePath}`;
+                    detectionJobs.push({ type: "audio", value: absPath });
+                });
+
+                const textDetectionResults = [];
+
+                for (const job of detectionJobs) {
+                    try {
+                        const agentResult = await runReportAgent(job.type, job.value);
+                        const mappedResult = mapTextDetectionResult(agentResult, job.type, job.value);
+                        if (mappedResult) textDetectionResults.push(mappedResult);
+                    } catch (jobErr) {
+                        console.error(`reportAgent failed for ${job.type} (${job.value}):`, jobErr.message);
+                        textDetectionResults.push({
+                            sourceType: job.type,
+                            sourceValue: job.value,
+                            status: "failed",
+                            error: jobErr.message
+                        });
+                    }
+                }
+
+                if (textDetectionResults.length > 0) {
                     await Tickets.findByIdAndUpdate(
                         ticket._id,
-                        { $push: { ticketDetections: { url: vidUrl, type: "video", modelType, detections } } },
-                        { session }
+                        { $set: { textDetection: textDetectionResults } }
                     );
                 }
+            } catch (agentErr) {
+                console.error("reportAgent pipeline failed:", agentErr.message);
             }
 
-            await session.commitTransaction();
-            session.endSession();
-
-        } catch (error) {
-            if (session.inTransaction()) {
-                await session.abortTransaction();
-            }
-            session.endSession();
-
-            if (error.message === "AI model did not detect any results.") {
-                return res.status(422).json({
-                    status: "error",
-                    message: "AI model did not detect any results. Ticket was not saved. Please try again or switch to manual mode."
-                });
-            }
-            return next(error);
-        }
-
-        try {
-            const detectionJobs = [];
-
-            if (ticket.observations) {
-                detectionJobs.push({ type: "text", value: ticket.observations });
-            }
-
-            (ticket.ticketImages || []).forEach((imgPath) => {
-                const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${imgPath}`;
-                detectionJobs.push({ type: "image", value: absPath });
-            });
-
-            (ticket.ticketVoices || []).forEach((voicePath) => {
-                const absPath = `/var/www/StadiumEye/StadiumEye_Backend-main${voicePath}`;
-                detectionJobs.push({ type: "audio", value: absPath });
-            });
-
-            const textDetectionResults = [];
-
-            for (const job of detectionJobs) {
-                try {
-                    const agentResult = await runReportAgent(job.type, job.value);
-                    const mappedResult = mapTextDetectionResult(agentResult, job.type, job.value);
-                    if (mappedResult) textDetectionResults.push(mappedResult);
-                } catch (jobErr) {
-                    console.error(`reportAgent failed for ${job.type} (${job.value}):`, jobErr.message);
-                    textDetectionResults.push({
-                        sourceType: job.type,
-                        sourceValue: job.value,
-                        status: "failed",
-                        error: jobErr.message
-                    });
+            try {
+                const admins = await Admin.find().select("email");
+                for (const admin of admins) {
+                    await EmailController.reportEmailToAdmin(admin.email, ticket);
                 }
+                await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
+            } catch (emailErr) {
+                console.error("Email notification failed:", emailErr.message);
             }
-
-            if (textDetectionResults.length > 0) {
-                await Tickets.findByIdAndUpdate(
-                    ticket._id,
-                    { $set: { textDetection: textDetectionResults } }
-                );
-            }
-        } catch (agentErr) {
-            console.error("reportAgent pipeline failed:", agentErr.message);
-        }
-
-        try {
-            const admins = await Admin.find().select("email");
-            for (const admin of admins) {
-                await EmailController.reportEmailToAdmin(admin.email, ticket);
-            }
-            await EmailController.reportEmailToUser(ticket.createdBy.email, ticket);
-        } catch (emailErr) {
-            console.error("Email notification failed:", emailErr.message);
-        }
-
-        const populatedTicket = await Tickets.findById(ticket._id);
-        res.status(201).json({ status: "success", data: populatedTicket });
+        });
     });
 
     //@decs  Get All Tickets
