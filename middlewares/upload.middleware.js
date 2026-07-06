@@ -11,7 +11,7 @@ const multerStorage = multer.diskStorage({
     if (file.mimetype.startsWith("image")) folder = "uploads/images";
     else if (file.mimetype.startsWith("video")) folder = "uploads/videos";
     else if (file.mimetype === "application/pdf") folder = "uploads/files";
-    else if (file.mimetype.startsWith("audio")) folder = "uploads/audios";
+    else if (file.mimetype.startsWith("audio")) folder = "uploads/voices";
 
     fs.mkdirSync(folder, { recursive: true });
     cb(null, folder);
