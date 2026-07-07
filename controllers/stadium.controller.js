@@ -9,6 +9,7 @@ const User = require("../models/user.model");
 const Ticket = require("../models/ticket.model");
 const extractLatLong = require("../utils/extractCoordinates.js");
 const { findVenueByName, findFixtureByVenueAndDate } = require("../utils/footballApi");
+const getNearestStadium = require("../utils/getNearestStadium");
 
 const deleteLocalFile = (filePath) => {
     const fullPath = path.join(__dirname, "..", filePath);
@@ -358,18 +359,25 @@ class StadiumController {
     //@route POST /stadiums/next-match
     //@access Private
     getNextMatch = asyncHandler(async (req, res, next) => {
-        const { location } = req.body;
+        const { lat, lng } = req.body;
         const userId = req.user._id;
 
-        const latLong = extractLatLong(location);
-        if (!latLong) {
-            return next(new ApiError("Invalid location format. Please provide a valid Google Maps link.", 400));
+        if (typeof lat !== "number" || typeof lng !== "number") {
+            return next(new ApiError("Invalid coordinates. Please provide valid lat and lng.", 400));
         }
+
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return next(new ApiError("Coordinates out of range.", 400));
+        }
+
+        const latLong = { lat, long: lng };
 
         const nearestStadium = await getNearestStadium(latLong);
         if (!nearestStadium) {
             return next(new ApiError("No stadiums found near your location.", 404));
         }
+
+        await Stadium.populate(nearestStadium, { path: "city" });
 
         const venue = await findVenueByName(nearestStadium.stadiumName);
         if (!venue) {
@@ -403,7 +411,13 @@ class StadiumController {
         res.status(200).json({
             status: "success",
             data: {
-                stadium: nearestStadium,
+                stadium: {
+                    location: nearestStadium.location,
+                    name: nearestStadium.name,
+                    city: nearestStadium.city,
+                    isActive: nearestStadium.isActive,
+                    distance: nearestStadium.distance
+                },
                 venue,
                 fixture,
                 savedUser: user.lastNextMatch
