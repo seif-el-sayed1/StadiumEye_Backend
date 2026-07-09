@@ -442,7 +442,13 @@ class StadiumController {
     //@route GET /stadiums/names
     //@access Private
     getStadiumsNames = asyncHandler(async (req, res, next) => {
-        const features = new ApiFeatures(Venue.find(), req.query, "Venue")
+        const usedStadiumNames = await Stadium.distinct("stadiumName");
+
+        const features = new ApiFeatures(
+            Venue.find({ name: { $nin: usedStadiumNames } }),
+            req.query,
+            "Venue"
+        )
             .search()
             .filter()
             .sort()
@@ -457,7 +463,6 @@ class StadiumController {
             data: venues
         });
     });
-
 }
 
 module.exports = new StadiumController();
