@@ -6,10 +6,12 @@ const { SERVICES_LIST } = require("../utils/constants");
 const { phoneNumberValidator } = require("./validatorComponents.js");
 const extractLatLong = require("../utils/extractCoordinates.js");
 const User = require("../models/user.model.js");
+const Venue = require("../models/venue.model.js");
+const Stadium = require("../models/stadium.model.js");
 
 class StadiumValidator {
     async addStadiumValidator(req, res, next) {
-        let { locationLink } = req.body;
+        let { locationLink, stadiumName } = req.body;
 
         if (!locationLink) {
             return res.status(400).json({
@@ -46,20 +48,44 @@ class StadiumValidator {
         
         joiErrorHandler(schema, req);
 
+        const matchedVenue = await Venue.findOne({
+            name: { $regex: `^${stadiumName}$`, $options: "i" }
+        });
+
+        if (!matchedVenue) {
+            return res.status(400).json({
+                success: false,
+                message: "stadiumName must match an existing venue name exactly"
+            });
+        }
+
+        const existingStadium = await Stadium.findOne({
+            stadiumName: { $regex: `^${matchedVenue.name}$`, $options: "i" }
+        });
+
+        if (existingStadium) {
+            return res.status(400).json({
+                success: false,
+                message: "A stadium with this name already exists"
+            });
+        }
+
+        req.body.stadiumName = matchedVenue.name;
+
         req.body.location = {
             name: `${req.body.stadiumName} Location`,
             lat: latLong.lat,
             lng: latLong.long,
             type: "Point",
             address: locationLink.trim(),
-            coordinates: [latLong.long, latLong.lat] // GeoJSON format [lng, lat]
+            coordinates: [latLong.long, latLong.lat]
         };
 
         next();
     }
 
     async updateStadiumValidator(req, res, next) {
-        let { locationLink, manager } = req.body; 
+        let { locationLink, manager, stadiumName } = req.body; 
         let latLong = null;
 
         if (locationLink) {
@@ -101,6 +127,33 @@ class StadiumValidator {
                     message: "Manager not found"
                 });
             }
+        }
+
+        if (stadiumName) {
+            const matchedVenue = await Venue.findOne({
+                name: { $regex: `^${stadiumName}$`, $options: "i" }
+            });
+
+            if (!matchedVenue) {
+                return res.status(400).json({
+                    success: false,
+                    message: "stadiumName must match an existing venue name exactly"
+                });
+            }
+
+            const existingStadium = await Stadium.findOne({
+                stadiumName: { $regex: `^${matchedVenue.name}$`, $options: "i" },
+                _id: { $ne: req.params.id }
+            });
+
+            if (existingStadium) {
+                return res.status(400).json({
+                    success: false,
+                    message: "A stadium already exists"
+                });
+            }
+
+            req.body.stadiumName = matchedVenue.name;
         }
 
         if (locationLink && latLong) {
