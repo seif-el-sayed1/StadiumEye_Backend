@@ -5,10 +5,11 @@ const ApiError = require("../utils/ApiError");
 const ApiFeatures = require("../utils/ApiFeatures");
 const { generatePDFReport, generateExcelReport } = require("../utils/generateReports");
 const Stadium = require("../models/stadium.model");
+const Venue = require("../models/venue.model");
 const User = require("../models/user.model");
 const Ticket = require("../models/ticket.model");
 const extractLatLong = require("../utils/extractCoordinates.js");
-const { findVenueByName, findFixtureByVenueAndDate } = require("../utils/footballApi");
+const { findVenueByName, findFixtureByVenueAndDate, syncVenuesByCountry } = require("../utils/footballApi");
 const getNearestStadium = require("../utils/getNearestStadium");
 
 const deleteLocalFile = (filePath) => {
@@ -409,7 +410,7 @@ class StadiumController {
         );
 
         res.status(200).json({
-            status: "success",
+            success: true,
             data: {
                 stadium: {
                     location: nearestStadium.location,
@@ -422,6 +423,38 @@ class StadiumController {
                 fixture,
                 savedUser: user.lastNextMatch
             }
+        });
+    });
+
+    //@desc  Sync Saudi Arabia venues
+    //@route POST /stadiums/sync-venues
+    //@access Private/Admin
+    syncVenues = asyncHandler(async (req, res, next) => {
+        await syncVenuesByCountry("Saudi-Arabia");
+
+        res.status(200).json({
+            success: true,
+            message: "Saudi Arabia venues synced successfully"
+        });
+    });
+
+    //@desc get stadium names
+    //@route GET /stadiums/names
+    //@access Private
+    getStadiumsNames = asyncHandler(async (req, res, next) => {
+        const features = new ApiFeatures(Venue.find(), req.query, "Venue")
+            .search()
+            .filter()
+            .sort()
+            .cleanResponse()
+            .paginate();
+
+        const venues = await features.query;
+
+        res.status(200).json({
+            success: true,
+            results: venues.length,
+            data: venues
         });
     });
 
