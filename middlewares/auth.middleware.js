@@ -17,8 +17,8 @@ const checkUser = async (Model, token, decoded, next) => {
   const currentUser = await mongooseQuery;
   if (!currentUser) return next(new ApiError(`${Model.modelName} ${translate("not found", decoded.lang)}`, 401));
   // Check if token is valid
-  if (currentUser.token !== token)
-    return next(new ApiError(translate("Session expired, please login again...", decoded.lang), 401));
+  // if (currentUser.token !== token)
+  //   return next(new ApiError(translate("Session expired, please login again...", decoded.lang), 401));
   // Check if the account is deactivated
   if (currentUser.isActive === false)
     return next(new ApiError(`This ${Model.modelName} ${translate("account is deactivated", decoded.lang)}`, 401));
