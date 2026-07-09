@@ -50,6 +50,20 @@ router.route("/next-match")
         StadiumController.getNextMatch
     )
 
+router.route("/sync-venue")
+    .get(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StadiumController.syncVenues
+    )
+
+router.route("/names")
+    .get(
+        protect, 
+        allowedTo(ADMIN, SUPER_ADMIN),
+        StadiumController.getStadiumsNames
+    )
+
 router
     .route("/:id")
     .get(StadiumController.getSingleStadium)
