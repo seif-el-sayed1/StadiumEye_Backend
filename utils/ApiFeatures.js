@@ -14,6 +14,7 @@ class ApiFeatures {
             City: ["nameAr", "nameEn"],
             Country: ["nameAr", "nameEn"],
             Stadium: ["stadiumName"],
+            Venue: ["name", "city"]
         };
 
         const fields = searchFields[this.modelName];
