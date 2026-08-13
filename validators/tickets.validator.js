@@ -26,15 +26,6 @@ class TicketsValidator {
             ticketVideos: Joi.array().items(Joi.string()).optional(),
             ticketImages: Joi.array().items(Joi.string()).optional(),
             ticketVoices: Joi.array().items(Joi.string()).optional(),
-
-            // Required when mode is "ai" and forbidden in manual mode since AI is not involved
-            modelType: Joi.string()
-                .valid("safety", "visualPollution")
-                .when("mode", {
-                    is: "ai",
-                    then: Joi.required(),
-                    otherwise: Joi.forbidden(),
-                }),
         });
         req.body.createdBy = req.user._id;
         joiErrorHandler(schema, req);
