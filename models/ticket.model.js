@@ -100,7 +100,6 @@ const ticketSchema = new mongoose.Schema({
             {
                 url: String,
                 type: { type: String, enum: ["image", "video"] },
-                modelType: { type: String, enum: ["safety", "visualPollution"] },
                 detections: [
                     {
                         Id: Number,
@@ -109,12 +108,12 @@ const ticketSchema = new mongoose.Schema({
                         x: Number,
                         y: Number,
                         width: Number,
-                        height: Number
+                        height: Number,
+                        modelType: { type: String, enum: ["safety", "visualPollution"] }
                     }
                 ]
             }
         ],
-        default: undefined
     },
     mode: {
         type: String,
