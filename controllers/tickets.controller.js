@@ -47,7 +47,7 @@ class TicketsController {
             });
         }
 
-        const { mode, modelType, observations, ...ticketData } = req.body;
+        const { mode, observations, ...ticketData } = req.body;
 
         if (ticketImages.length > 0) ticketData.ticketImages = ticketImages;
         if (ticketVideos.length > 0) ticketData.ticketVideos = ticketVideos;
@@ -70,13 +70,13 @@ class TicketsController {
             if (mode === "ai") {
                 for (const imgUrl of ticketImages) {
                     try {
-                        const rawDetections = await processDetections(`${baseUrl}${imgUrl}`, modelType, "image");
+                        const rawDetections = await processDetections(`${baseUrl}${imgUrl}`, "image");
                         const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
 
                         if (detections.length > 0) {
                             await Tickets.findByIdAndUpdate(
                                 ticket._id,
-                                { $push: { ticketDetections: { url: imgUrl, type: "image", modelType, detections } } }
+                                { $push: { ticketDetections: { url: imgUrl, type: "image", detections } } }
                             );
                         } else {
                             console.error(`No detections found for image: ${imgUrl}`);
@@ -88,13 +88,13 @@ class TicketsController {
 
                 for (const vidUrl of ticketVideos) {
                     try {
-                        const rawDetections = await processDetections(`${baseUrl}${vidUrl}`, modelType, "video");
+                        const rawDetections = await processDetections(`${baseUrl}${vidUrl}`, "video");
                         const detections = Array.isArray(rawDetections) ? rawDetections : (Array.isArray(rawDetections?.detections) ? rawDetections.detections : []);
 
                         if (detections.length > 0) {
                             await Tickets.findByIdAndUpdate(
                                 ticket._id,
-                                { $push: { ticketDetections: { url: vidUrl, type: "video", modelType, detections } } }
+                                { $push: { ticketDetections: { url: vidUrl, type: "video", detections } } }
                             );
                         } else {
                             console.error(`No detections found for video: ${vidUrl}`);
