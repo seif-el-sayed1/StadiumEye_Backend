@@ -38,11 +38,13 @@ class TicketsController {
 
         if (req.files && req.files.length > 0) {
             req.files.forEach((file) => {
-                if (file.mimetype.startsWith("image"))
+                const field = file.fieldname.toLowerCase();
+
+                if (field.includes("image") || file.mimetype.startsWith("image"))
                     ticketImages.push(`/uploads/images/${file.filename}`);
-                if (file.mimetype.startsWith("video"))
+                else if (field.includes("video") || file.mimetype.startsWith("video"))
                     ticketVideos.push(`/uploads/videos/${file.filename}`);
-                if (file.mimetype.startsWith("audio"))
+                else if (field.includes("voice") || file.mimetype.startsWith("audio"))
                     ticketVoices.push(`/uploads/voices/${file.filename}`);
             });
         }

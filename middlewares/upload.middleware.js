@@ -4,14 +4,23 @@ const { translate } = require("../utils/translation");
 const path = require("path");
 const fs = require("fs");
 
+const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"];
+const VIDEO_EXTS = [".mp4", ".mov", ".avi", ".mkv", ".webm"];
+const AUDIO_EXTS = [".mp3", ".m4a", ".wav", ".ogg", ".aac"];
+
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
     let folder = "uploads/others";
 
-    if (file.mimetype.startsWith("image")) folder = "uploads/images";
-    else if (file.mimetype.startsWith("video")) folder = "uploads/videos";
-    else if (file.mimetype === "application/pdf") folder = "uploads/files";
-    else if (file.mimetype.startsWith("audio")) folder = "uploads/voices";
+    if (file.mimetype.startsWith("image") || IMAGE_EXTS.includes(ext))
+      folder = "uploads/images";
+    else if (file.mimetype.startsWith("video") || VIDEO_EXTS.includes(ext))
+      folder = "uploads/videos";
+    else if (file.mimetype === "application/pdf")
+      folder = "uploads/files";
+    else if (file.mimetype.startsWith("audio") || AUDIO_EXTS.includes(ext))
+      folder = "uploads/voices";
 
     fs.mkdirSync(folder, { recursive: true });
     cb(null, folder);
@@ -96,17 +105,28 @@ const VideoConfiguration = multer({
 const uploadMediaConfiguration = multer({
   storage: multerStorage,
   fileFilter: (req, file, cb) => {
-    const isImage = file.mimetype.startsWith("image");
-    const isVideo = file.mimetype.startsWith("video");
-    const isAudio = file.mimetype.startsWith("audio");
+    const mime = file.mimetype;
+    const ext = path.extname(file.originalname).toLowerCase();
 
-    if (!isImage && !isVideo && !isAudio)
+    let type = null;
+
+    if (mime.startsWith("image")) type = "image";
+    else if (mime.startsWith("video")) type = "video";
+    else if (mime.startsWith("audio")) type = "voice";
+    else if (mime === "application/octet-stream" || mime === "") {
+      // Fallback: mimetype missing/generic — infer from file extension
+      if (IMAGE_EXTS.includes(ext)) type = "image";
+      else if (VIDEO_EXTS.includes(ext)) type = "video";
+      else if (AUDIO_EXTS.includes(ext)) type = "voice";
+    }
+
+    if (!type)
       return cb(
         new ApiError("Only images, videos or voice allowed", 400),
         false
       );
 
-    req.fileType = isImage ? "image" : isVideo ? "video" : "voice";
+    req.fileType = type;
     cb(null, true);
   },
   limits: { fileSize: 50 * 1024 * 1024 }
